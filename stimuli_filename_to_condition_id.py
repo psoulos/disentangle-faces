@@ -36,4 +36,15 @@ results['scrambled_face_ids'] = scrambled_face_ids
 with open('stimuli/mapping.json', 'w') as f:
     f.write(json.dumps(results, indent=4))
 
+normal_face_parameters = ''
+scrambled_face_parameters = ''
+for id in normal_face_ids:
+    normal_face_parameters += ' -a {}'.format(id)
+
+for id in scrambled_face_ids:
+    scrambled_face_parameters += ' -c {}'.format(id)
+print('normal face ids:')
+print(normal_face_parameters)
+print('scrambled face ids:')
+print(scrambled_face_parameters)
 

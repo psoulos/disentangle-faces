@@ -19,6 +19,9 @@ circle_stimulus_filename = 'Circle.bmp'
 
 ms_to_s = 1000.0
 
+total_duration = 0
+num_samples = 0
+
 for root, subdirs, files in os.walk(subjects_dir):
     for file in files:
         # We found a matching file, open it and create the paradigm file
@@ -53,4 +56,10 @@ for root, subdirs, files in os.walk(subjects_dir):
                             stimulus_filename
                         )
                         #print(paradigm_row)
-                        paradigm_file.write(paradigm_row)
+                        #paradigm_file.write(paradigm_row)
+                        if not condition_id == null_condition:
+                            total_duration += stimulus_duration
+                            num_samples += 1
+
+print('total duration: {}'.format(total_duration))
+print('num samples: {}'.format(num_samples))
