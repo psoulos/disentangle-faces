@@ -56,7 +56,7 @@ for root, subdirs, files in os.walk(subjects_dir):
                             stimulus_filename
                         )
                         #print(paradigm_row)
-                        #paradigm_file.write(paradigm_row)
+                        paradigm_file.write(paradigm_row)
                         if not condition_id == null_condition:
                             total_duration += stimulus_duration
                             num_samples += 1

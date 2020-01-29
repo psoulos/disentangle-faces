@@ -14,7 +14,8 @@ unused_stimuli = ['f076.bmp', 'f117.bmp', 'f147.bmp', 'f148.bmp', 'f149.bmp',
                   'f150.bmp', 'pf001.bmp', 'pf002.bmp', 'pf003.bmp', 'pf004.bmp',
                   'ps001.bmp', 'ps002.bmp', 'ps003.bmp', 'ps004.bmp', 'pu001.bmp',
                   'pu002.bmp', 'pu003.bmp', 'pu004.bmp', 's076.bmp', 's117.bmp',
-                  's147.bmp', 's148.bmp', 's149.bmp', 's150.bmp', 'u076.bmp', 'u117.bmp']
+                  's147.bmp', 's148.bmp', 's149.bmp', 's150.bmp', 'u076.bmp', 'u117.bmp',
+                  'u147.bmp', 'u148.bmp', 'u149.bmp', 'u150.bmp']
 
 normal_face_ids = []
 scrambled_face_ids = []
