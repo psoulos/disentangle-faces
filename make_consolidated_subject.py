@@ -1,5 +1,6 @@
 import argparse
 import os
+import glob
 import shutil
 # Create vaegan-sub-XX-all
 #          - bold
@@ -35,7 +36,7 @@ for subject_num in subject_nums:
     consolidated_run_num = 1
     for session_num in session_nums:
         subject_session_dir = subject_session_dir_template.format(subject_num, session_num)
-        subject_session_bold_dir = os.path.join(subject_session_dir, 'bold')
+        subject_session_bold_dir = os.path.join(args.unpackdata_dir, subject_session_dir, 'bold')
         localizer_runs = []
         face_runs = []
 
@@ -57,5 +58,8 @@ for subject_num in subject_nums:
 
             consolidated_functional_run = os.path.join(consolidated_subject_bold_dir,
                                                        '{:03d}'.format(consolidated_run_num))
-            shutil.copytree(functional_run_dir, consolidated_functional_run)
+            os.makedirs(consolidated_functional_run)
             consolidated_run_num += 1
+
+            shutil.copy(os.path.join(functional_run_dir, 'f.nii.gz', consolidated_functional_run))
+            shutil.copy(glob.glob(os.path.join(functional_run_dir, '*.tsv'))[0], consolidated_functional_run)
