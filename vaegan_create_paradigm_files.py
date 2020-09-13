@@ -1,65 +1,50 @@
-import csv
 import os
-import re
-import json
+import argparse
+import glob
 
-subjects_dir = 'subjects/vaegan'
-bold_dir = 'BOLD'
 
-task_run_file_regex = 'task001_run.*.txt'
-paradigm_file_name = 'dyn.para'
+LOCALIZER_RUNS_FILE_NAME = 'rlf_localizer.txt'
+FACE_RUNS_FILE_NAME = 'rlf_faces.txt'
+CONDITION_IDS = {
+    'fix': 0,
+    'face': 1,
+    'object': 2
+}
 
-stimulus_mapping_file = 'stimuli/mapping.json'
-json_file = open(stimulus_mapping_file, 'r')
-stimulus_mapping = json.load(json_file)
-filename_to_condition = stimulus_mapping['filename_to_condition_id']
-null_condition = 0
-null_stimulus_filename = 'i999.bmp'
-circle_stimulus_filename = 'Circle.bmp'
+parser = argparse.ArgumentParser()
+parser.add_argument('--unpackdata_dir', type=str, help='', required=True)
+args = parser.parse_args()
 
-ms_to_s = 1000.0
+subject_nums = range(1, 5)
 
-total_duration = 0
-num_samples = 0
+consolidated_subject_dir_template = 'vaegan-sub-{:02d}-all'
 
-for root, subdirs, files in os.walk(subjects_dir):
-    for file in files:
-        # We found a matching file, open it and create the paradigm file
-        if re.search(task_run_file_regex, file):
-            with open(os.path.join(root, file), newline='') as csvfile:
-                print('processing {}'.format(os.path.join(root, file)))
-                initial_computer_time = None
-                reader = csv.reader(csvfile)
-                with open(os.path.join(root, paradigm_file_name), 'w') as paradigm_file:
-                    for row in reader:
-                        computer_time = int(row[1])
-                        if not initial_computer_time:
-                            initial_computer_time = computer_time
-                        onset = (computer_time - initial_computer_time) / ms_to_s
+for subject_num in subject_nums:
+    consolidated_subject_name = consolidated_subject_dir_template.format(subject_num)
+    consolidated_subject_dir = os.path.join(args.unpackdata_dir, consolidated_subject_name)
+    consolidated_subject_bold_dir = os.path.join(consolidated_subject_dir, 'bold')
 
-                        stimulus_filename = os.path.basename(row[6])
-                        if stimulus_filename == null_stimulus_filename \
-                                or stimulus_filename == circle_stimulus_filename:
-                            condition_id = null_condition
-                        else:
-                            condition_id = filename_to_condition[stimulus_filename]
+    # Create the localizer paradigm files
+    for localizer_run in os.path.join(consolidated_subject_bold_dir, LOCALIZER_RUNS_FILE_NAME):
+        localizer_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(localizer_run))
+        # Convert the events file from OpenNeuro to Freesurfer paradigm format
+        paradigm_file = open(os.path.join(localizer_run_dir, 'dyn.para'), 'w')
+        event_file = glob.glob('*.tsv')[0]
+        onset = 0
+        for event_line in open(event_file, 'r'):
+            info = event_line.split()
+            # Skip the header line
+            if 'onset' in info:
+                continue
+            duration = info[1]
+            condition_type = info[2]
+            condition_id = CONDITION_IDS[condition_type]
+            paradigm_file.write('{}\t{}\t{}\t{}\n'.format(
+                onset,
+                condition_id,
+                duration,
+                condition_type
+            ))
+            onset += duration
 
-                        stimulus_duration = int(row[4]) / ms_to_s
-                        weight = 1.0
-
-                        crosshair_duration = int(row[5]) / ms_to_s
-                        paradigm_row = '{} {} {} {} {}\n'.format(
-                            round(onset + crosshair_duration, 3),
-                            condition_id,
-                            stimulus_duration,
-                            weight,
-                            stimulus_filename
-                        )
-                        #print(paradigm_row)
-                        paradigm_file.write(paradigm_row)
-                        if not condition_id == null_condition:
-                            total_duration += stimulus_duration
-                            num_samples += 1
-
-print('total duration: {}'.format(total_duration))
-print('num samples: {}'.format(num_samples))
+    # TODO Create the face run paradigm files
