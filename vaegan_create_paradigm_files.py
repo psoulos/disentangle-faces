@@ -72,6 +72,7 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
     stimulus_to_celeba[stimulus] = celeba
 
 for subject_num in subject_nums:
+    print('Processing subject {}'.format(subject_num))
     consolidated_subject_name = consolidated_subject_dir_template.format(subject_num)
     consolidated_subject_dir = os.path.join(args.unpackdata_dir, consolidated_subject_name)
     consolidated_subject_bold_dir = os.path.join(consolidated_subject_dir, 'bold')
@@ -102,6 +103,7 @@ for subject_num in subject_nums:
 
     test_stimuli = TEST_STIMULI[consolidated_subject_name]
     for face_run in open(os.path.join(consolidated_subject_bold_dir, FACE_RUNS_FILE_NAME), 'r'):
+        print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
         paradigm_file = open(os.path.join(face_run_dir, 'dyn.para'), 'w')
@@ -109,16 +111,17 @@ for subject_num in subject_nums:
         onset = 0
         for event_line in open(event_file, 'r'):
             info = event_line.split()
-            # Skip the header line
-            if 'onset' in info:
+            # Skip the header line and any blank lines
+            if 'onset' in info or len(info) == 0:
                 continue
-            onset = int(info[0])
-            duration = int(info[1])
+            onset = float(info[0])
+            duration = float(info[1])
             condition_type = info[2]
             stimulus_filename = info[3]
+            base_filename = os.path.basename(stimulus_filename)
             oneback = bool(int(info[4]))
 
-            if condition_type == 'Fix':
+            if base_filename == 'fixation.png':
                 condition_id = 0
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
                     onset,
@@ -136,8 +139,9 @@ for subject_num in subject_nums:
                     DEFAULT_WEIGHT,
                     stimulus_filename
                 ))
-            elif os.path.basename(stimulus_filename) in test_stimuli:
-                condition_id = test_stimuli.index(os.path.basename(stimulus_filename)) + TEST_STIMULI_CONDITION_OFFSET
+            elif base_filename in test_stimuli:
+                print('found test stimuli')
+                condition_id = test_stimuli.index(base_filename) + TEST_STIMULI_CONDITION_OFFSET
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
                     onset,
                     condition_id,
