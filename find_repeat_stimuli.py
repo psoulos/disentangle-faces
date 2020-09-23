@@ -36,5 +36,5 @@ for subject_num in subject_nums:
                 seen_images[stimulus] = 0
             seen_images[stimulus] += 1
 
-    print('Subject {}'.format(subject_num + 1))
+    print('Subject {}'.format(subject_num))
     print(filter(lambda x: x[1] > SEEN_THRESHOLD, seen_images.items()))

@@ -48,9 +48,9 @@ for subject_num in subject_nums:
         functional_runs = filter(lambda x: x.isdigit(), sorted(os.listdir(subject_session_bold_dir)))
         for functional_run in functional_runs:
             if functional_run in localizer_runs:
-                consolidated_localizer_run_file.write('{}\n'.format(functional_run))
+                consolidated_localizer_run_file.write('{:03d}\n'.format(consolidated_run_num))
             elif functional_run in face_runs:
-                consolidated_face_run_file.write('{}\n'.format(functional_run))
+                consolidated_face_run_file.write('{:03d}\n'.format(consolidated_run_num))
             else:
                 raise NameError('functional run {} is neither localizer or face'.format(functional_run))
 
@@ -61,5 +61,5 @@ for subject_num in subject_nums:
             os.makedirs(consolidated_functional_run)
             consolidated_run_num += 1
 
-            shutil.copy(os.path.join(functional_run_dir, 'f.nii.gz', consolidated_functional_run))
+            shutil.copy(os.path.join(functional_run_dir, 'f.nii.gz'), consolidated_functional_run)
             shutil.copy(glob.glob(os.path.join(functional_run_dir, '*.tsv'))[0], consolidated_functional_run)
