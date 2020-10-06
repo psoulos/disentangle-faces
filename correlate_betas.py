@@ -51,7 +51,10 @@ TEST_STIMULI = {
                           'F14520.jpg', 'M14256.jpg']
 }
 
-MODEL_TYPES = ['dvae', 'vae']
+model_type = 'dvae'
+print('Model {}'.format(model_type))
+saved_model_dir = os.path.join('output', MODELS[model_type], 'tfhub')
+model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
 stimulus_to_celeba = {}
 for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
@@ -64,44 +67,41 @@ for subject_num in subject_nums:
     localizer_map = sio.loadmat('localizer-maps/sub-{:02d}_sig.mat'.format(subject_num))['data'][0]
     n_voxels = len(localizer_map)
 
-    for model_type in MODEL_TYPES:
-        print('Model {}'.format(model_type))
-        saved_model_dir = os.path.join('output', MODELS[model_type], 'tfhub')
-        model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
-        betas = sio.loadmat('betas/sub-{:02d}_mean-{}-beta.mat'.format(subject_num, model_type))
-        betas = np.array(betas['data']).transpose()
-        latent_betas = betas[:LATENT_DIMENSION]
+    print('Model {}'.format(model_type))
+    betas = sio.loadmat('betas/sub-{:02d}_mean-{}-beta.mat'.format(subject_num, model_type))
+    betas = np.array(betas['data']).transpose()
+    latent_betas = betas[:LATENT_DIMENSION]
 
-        ground_truth_voxels = betas[LATENT_DIMENSION+1:].transpose()
+    ground_truth_voxels = betas[LATENT_DIMENSION+1:].transpose()
 
-        test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
+    test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
-        predicted_voxels = np.empty((len(test_images), n_voxels))
-        correlation = np.empty(n_voxels)
-        for index, test_image in enumerate(test_images):
-            celeba_file = os.path.join(args.celeba_dir, stimulus_to_celeba[test_image])
-            # (1 x 24)
-            latent_values = encode_img(celeba_file)
-            # (1 x n_voxels)
-            prediction = np.matmul(latent_values, latent_betas)
-            predicted_voxels[index] = prediction
+    predicted_voxels = np.empty((len(test_images), n_voxels))
+    correlation = np.empty(n_voxels)
+    for index, test_image in enumerate(test_images):
+        celeba_file = os.path.join(args.celeba_dir, stimulus_to_celeba[test_image])
+        # (1 x 24)
+        latent_values = encode_img(celeba_file)
+        # (1 x n_voxels)
+        prediction = np.matmul(latent_values, latent_betas)
+        predicted_voxels[index] = prediction
 
-        predicted_voxels = predicted_voxels.transpose()
-        for i in range(len(correlation)):
-            correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i], nan_policy='raise').correlation
+    predicted_voxels = predicted_voxels.transpose()
+    for i in range(len(correlation)):
+        correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i], nan_policy='raise').correlation
 
-        #correlation_vectors['subject{}-{}'.format(subject_num, model_type)] = correlation.copy()
+    #correlation_vectors['subject{}-{}'.format(subject_num, model_type)] = correlation.copy()
 
-        sio.savemat('subject{}-{}.mat'.format(subject_num, model), {'data': correlation})
-        for threshold in THRESHOLDS:
-            print('Threshold {}'.format(threshold))
-            filtered_correlation = correlation.copy()
-            below_threshold = localizer_map < threshold
-            num_above_threshold = len(localizer_map) - np.sum(below_threshold)
-            print('Number above threshold: {}'.format(num_above_threshold))
-            filtered_correlation[below_threshold] = 0
-            sio.savemat('threshold-{}-subject{}-{}.mat'.format(threshold, subject_num, model), {'data': filtered_correlation})
-            #correlation_vectors['filtered-subject{}-{}'.format(subject_num, model_type)] = filtered_correlation
-            average_correlation = np.sum(filtered_correlation) / num_above_threshold
-            print('Correlation: {}'.format(average_correlation))
+    sio.savemat('subject{}-{}.mat'.format(subject_num, model), {'data': correlation})
+    for threshold in THRESHOLDS:
+        print('Threshold {}'.format(threshold))
+        filtered_correlation = correlation.copy()
+        below_threshold = localizer_map < threshold
+        num_above_threshold = len(localizer_map) - np.sum(below_threshold)
+        print('Number above threshold: {}'.format(num_above_threshold))
+        filtered_correlation[below_threshold] = 0
+        sio.savemat('threshold-{}-subject{}-{}.mat'.format(threshold, subject_num, model), {'data': filtered_correlation})
+        #correlation_vectors['filtered-subject{}-{}'.format(subject_num, model_type)] = filtered_correlation
+        average_correlation = np.sum(filtered_correlation) / num_above_threshold
+        print('Correlation: {}'.format(average_correlation))
 #sio.savemat('correlation.mat', correlation_vectors)
