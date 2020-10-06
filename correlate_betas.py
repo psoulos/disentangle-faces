@@ -92,7 +92,7 @@ for subject_num in subject_nums:
 
     #correlation_vectors['subject{}-{}'.format(subject_num, model_type)] = correlation.copy()
 
-    sio.savemat('subject{}-{}.mat'.format(subject_num, model), {'data': correlation})
+    sio.savemat('subject{}-{}.mat'.format(subject_num, model_type), {'data': correlation})
     for threshold in THRESHOLDS:
         print('Threshold {}'.format(threshold))
         filtered_correlation = correlation.copy()
@@ -100,7 +100,7 @@ for subject_num in subject_nums:
         num_above_threshold = len(localizer_map) - np.sum(below_threshold)
         print('Number above threshold: {}'.format(num_above_threshold))
         filtered_correlation[below_threshold] = 0
-        sio.savemat('threshold-{}-subject{}-{}.mat'.format(threshold, subject_num, model), {'data': filtered_correlation})
+        sio.savemat('threshold-{}-subject{}-{}.mat'.format(threshold, subject_num, model_type), {'data': filtered_correlation})
         #correlation_vectors['filtered-subject{}-{}'.format(subject_num, model_type)] = filtered_correlation
         average_correlation = np.sum(filtered_correlation) / num_above_threshold
         print('Correlation: {}'.format(average_correlation))
