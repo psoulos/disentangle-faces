@@ -28,8 +28,9 @@ Condition 26 through 46 are the 20 images shown multiple times.
 '''
 FACE_RUN_FIX_CONDITION = 0
 LATENT_DIMENSION = 24
-FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 1
-TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 2
+FACE_BIAS_CONDITION_ID = LATENT_DIMENSION + 1
+FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 2
+TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 3
 TEST_STIMULI = {
     'vaegan-sub-01-all': ['M2553.jpg', 'F1631.jpg', 'M2424.jpg', 'F1235.jpg', 'F1148.jpg', 'M2156.jpg', 'F2376.jpg',
                           'M1584.jpg', 'M2466.jpg', 'F2068.jpg', 'F1586.jpg', 'F1232.jpg', 'M2203.jpg', 'M1365.jpg',
@@ -92,11 +93,11 @@ for subject_num in subject_nums:
             duration = int(info[1])
             condition_type = info[2]
             condition_id = LOCALIZER_CONDITION_IDS[condition_type]
-            # TODO I forgot to write the weights as 1.0 but everything ran anyway, hopefully it just defaults to 1.0
-            paradigm_file.write('{}\t{}\t{}\t{}\n'.format(
+            paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
                 onset,
                 condition_id,
                 duration,
+                DEFAULT_WEIGHT,
                 condition_type
             ))
             onset += duration
@@ -130,6 +131,9 @@ for subject_num in subject_nums:
                     DEFAULT_WEIGHT,
                     stimulus_filename
                 ))
+                # Immediately go to the top of the loop so that we don't add the face bias condition at the end of
+                # this loop.
+                continue
             elif oneback:
                 condition_id = FACE_RUN_ONEBACK_CONDITION
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
@@ -164,3 +168,11 @@ for subject_num in subject_nums:
                         value,
                         stimulus_filename
                     ))
+
+            paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
+                onset,
+                FACE_BIAS_CONDITION_ID,
+                duration,
+                DEFAULT_WEIGHT,
+                stimulus_filename
+            ))
