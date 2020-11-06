@@ -7,9 +7,15 @@ import numpy as np
 
 from disentanglement_lib.data.ground_truth.celeba import process_path
 
-MODEL_DIR = 'factor_vae_latent_24_gamma_24_try_1'
-LATENT_VARIABLE_OP_NAME = 'sampled_latent_variable:0'
-saved_model_dir = os.path.join('output', MODEL_DIR, 'tfhub')
+MODELS = {
+    'dvae': 'factor_vae_latent_24_gamma_24_try_1',
+    'vae': 'vae_latent_24_try_1'
+}
+model_type = 'dvae'
+
+LATENT_VARIABLE_OP_NAME = 'encoder/means/BiasAdd:0'
+
+saved_model_dir = os.path.join('output', MODELS[model_type], 'tfhub')
 sess = tf.Session()
 model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
@@ -82,7 +88,7 @@ for subject_num in subject_nums:
     for localizer_run in open(os.path.join(consolidated_subject_bold_dir, LOCALIZER_RUNS_FILE_NAME), 'r'):
         localizer_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(localizer_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(localizer_run_dir, 'dyn.para'), 'w')
+        paradigm_file = open(os.path.join(localizer_run_dir, '{}.dyn.para'.format(model_type)), 'w')
         event_file = glob.glob(os.path.join(localizer_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):
