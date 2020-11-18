@@ -88,7 +88,7 @@ for subject_num in subject_nums:
     for localizer_run in open(os.path.join(consolidated_subject_bold_dir, LOCALIZER_RUNS_FILE_NAME), 'r'):
         localizer_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(localizer_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(localizer_run_dir, '{}.dyn.para'.format(model_type)), 'w')
+        paradigm_file = open(os.path.join(localizer_run_dir, 'localizer.dyn.para'), 'w')
         event_file = glob.glob(os.path.join(localizer_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):
@@ -113,7 +113,7 @@ for subject_num in subject_nums:
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(face_run_dir, 'dyn.para'), 'w')
+        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(model_type)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):
