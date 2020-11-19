@@ -65,18 +65,20 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
 for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
     localizer_map = sio.loadmat('localizer-maps/sub-{:02d}_sig.mat'.format(subject_num))['data'][0]
-    n_voxels = len(localizer_map)
+    threshold = 4
+    above_threshold = localizer_map > threshold
+    n_voxels = np.sum(above_threshold)
+    print('Number above threshold: {}'.format(n_voxels))
 
     print('Model {}'.format(model_type))
     betas = sio.loadmat('betas/sub-{:02d}_mean-{}-beta.mat'.format(subject_num, model_type))
-    betas = np.array(betas['data']).transpose()
+    betas = np.array(betas['data'][above_threshold]).transpose()
     latent_betas = betas[:LATENT_DIMENSION]
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
     # The final betas are for the test images
     ground_truth_voxels = betas[len(betas) - len(test_images):].transpose()
-
 
     predicted_voxels = np.empty((len(test_images), n_voxels))
     correlation = np.empty(n_voxels)
@@ -90,13 +92,13 @@ for subject_num in subject_nums:
 
     predicted_voxels = predicted_voxels.transpose()
     for i in range(len(correlation)):
-        correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i], nan_policy='raise').correlation
+        correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
 
     # Calculate threshold
-    threshold = 4
+
     below_threshold = localizer_map < threshold
     num_above_threshold = len(localizer_map) - np.sum(below_threshold)
-    print('Number above threshold: {}'.format(num_above_threshold))
+
 
 
     '''
@@ -112,13 +114,12 @@ for subject_num in subject_nums:
     num_null_distribution_samples = 1000
     null_hypothesis_average_correlations = np.empty(num_null_distribution_samples)
     null_samples = np.empty((num_null_distribution_samples, len(test_images), n_voxels))
-    ground_truth_voxels_image_first_dim = ground_truth_voxels.transpose().copy()
     for i in range(num_null_distribution_samples):
         null_hypothesis_correlation = np.empty(n_voxels)
-        null_hypothesis_ground_truth = ground_truth_voxels_image_first_dim.copy()
+        null_hypothesis_ground_truth = ground_truth_voxels.copy()
         np.random.shuffle(null_hypothesis_ground_truth)
         for j in range(len(correlation)):
-            null_hypothesis_correlation[j] = spearmanr(predicted_voxels[i], null_hypothesis_ground_truth[i], nan_policy='raise').correlation
+            null_hypothesis_correlation[j] = spearmanr(predicted_voxels[j], null_hypothesis_ground_truth[j]).correlation
         # Threshold the null hypothesis corerlation
         null_hypothesis_correlation[below_threshold] = 0
         null_hypothesis_average_correlations[i] = np.sum(null_hypothesis_correlation) / num_above_threshold
