@@ -74,6 +74,7 @@ for subject_num in subject_nums:
     betas = sio.loadmat('betas/sub-{:02d}_mean-{}-beta.mat'.format(subject_num, model_type))
     betas = np.array(betas['data'][above_threshold]).transpose()
     latent_betas = betas[:LATENT_DIMENSION]
+    bias_beta = betas[LATENT_DIMENSION]
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
@@ -88,18 +89,11 @@ for subject_num in subject_nums:
         latent_values = encode_img(celeba_file)
         # (1 x n_voxels)
         prediction = np.matmul(latent_values, latent_betas)
-        predicted_voxels[index] = prediction
+        predicted_voxels[index] = prediction + bias_beta
 
     predicted_voxels = predicted_voxels.transpose()
     for i in range(len(correlation)):
         correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
-
-    # Calculate threshold
-
-    below_threshold = localizer_map < threshold
-    num_above_threshold = len(localizer_map) - np.sum(below_threshold)
-
-
 
     '''
     filtered_correlation = correlation.copy()
@@ -111,6 +105,7 @@ for subject_num in subject_nums:
     '''
 
     # Generate samples from a null distribution for significance testing
+    print('generated null hypothesis')
     num_null_distribution_samples = 1000
     null_hypothesis_average_correlations = np.empty(num_null_distribution_samples)
     null_samples = np.empty((num_null_distribution_samples, len(test_images), n_voxels))
@@ -121,18 +116,12 @@ for subject_num in subject_nums:
         for j in range(len(correlation)):
             null_hypothesis_correlation[j] = spearmanr(predicted_voxels[j], null_hypothesis_ground_truth[j]).correlation
         # Threshold the null hypothesis corerlation
-        null_hypothesis_correlation[below_threshold] = 0
-        null_hypothesis_average_correlations[i] = np.sum(null_hypothesis_correlation) / num_above_threshold
+        null_hypothesis_average_correlations[i] = np.sum(null_hypothesis_correlation) / n_voxels
 
     #correlation_vectors['subject{}-{}'.format(subject_num, model_type)] = correlation.copy()
 
     sio.savemat('subject{}-{}.mat'.format(subject_num, model_type), {'data': correlation})
-    filtered_correlation = correlation.copy()
-
-    filtered_correlation[below_threshold] = 0
-    sio.savemat('threshold-{}-subject{}-{}.mat'.format(threshold, subject_num, model_type),
-                {'data': filtered_correlation})
-    average_correlation = np.sum(filtered_correlation) / num_above_threshold
+    average_correlation = np.sum(correlation) / n_voxels
     print('Correlation: {}'.format(average_correlation))
 
     print('Number of correlation>null hypothesis correlation')
