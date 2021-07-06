@@ -7,17 +7,7 @@ import numpy as np
 
 from disentanglement_lib.data.ground_truth.celeba import process_path
 
-MODELS = {
-    'dvae': 'factor_vae_latent_24_gamma_24_try_1',
-    'vae': 'vae_latent_24_try_1'
-}
-model_type = 'dvae'
-
 LATENT_VARIABLE_OP_NAME = 'encoder/means/BiasAdd:0'
-
-saved_model_dir = os.path.join('output', MODELS[model_type], 'tfhub')
-sess = tf.Session()
-model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
 DEFAULT_WEIGHT = 1.0
 LOCALIZER_RUNS_FILE_NAME = 'rlf_localizer.txt'
@@ -65,9 +55,15 @@ def encode_img(img_file):
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--model_dir', type=str, help='', required=True)
 parser.add_argument('--unpackdata_dir', type=str, help='', required=True)
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
+parser.add_argument('--do_localizer', action='store_true', required=False)
 args = parser.parse_args()
+
+saved_model_dir = os.path.join('output', args.model_dir, 'tfhub')
+sess = tf.Session()
+model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
 subject_nums = range(1, 5)
 
@@ -85,35 +81,36 @@ for subject_num in subject_nums:
     consolidated_subject_bold_dir = os.path.join(consolidated_subject_dir, 'bold')
 
     # Create the localizer paradigm files
-    for localizer_run in open(os.path.join(consolidated_subject_bold_dir, LOCALIZER_RUNS_FILE_NAME), 'r'):
-        localizer_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(localizer_run)))
-        # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(localizer_run_dir, 'localizer.dyn.para'), 'w')
-        event_file = glob.glob(os.path.join(localizer_run_dir, '*.tsv'))[0]
-        onset = 0
-        for event_line in open(event_file, 'r'):
-            info = event_line.split()
-            # Skip the header line
-            if 'onset' in info:
-                continue
-            duration = int(info[1])
-            condition_type = info[2]
-            condition_id = LOCALIZER_CONDITION_IDS[condition_type]
-            paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
-                onset,
-                condition_id,
-                duration,
-                DEFAULT_WEIGHT,
-                condition_type
-            ))
-            onset += duration
+    if args.do_localizer:
+        for localizer_run in open(os.path.join(consolidated_subject_bold_dir, LOCALIZER_RUNS_FILE_NAME), 'r'):
+            localizer_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(localizer_run)))
+            # Convert the events file from OpenNeuro to Freesurfer paradigm format
+            paradigm_file = open(os.path.join(localizer_run_dir, 'localizer.dyn.para'), 'w')
+            event_file = glob.glob(os.path.join(localizer_run_dir, '*.tsv'))[0]
+            onset = 0
+            for event_line in open(event_file, 'r'):
+                info = event_line.split()
+                # Skip the header line
+                if 'onset' in info:
+                    continue
+                duration = int(info[1])
+                condition_type = info[2]
+                condition_id = LOCALIZER_CONDITION_IDS[condition_type]
+                paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
+                    onset,
+                    condition_id,
+                    duration,
+                    DEFAULT_WEIGHT,
+                    condition_type
+                ))
+                onset += duration
 
     test_stimuli = TEST_STIMULI[consolidated_subject_name]
     for face_run in open(os.path.join(consolidated_subject_bold_dir, FACE_RUNS_FILE_NAME), 'r'):
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(model_type)), 'w')
+        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(args.model_dir)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):

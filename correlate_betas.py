@@ -10,7 +10,7 @@ from disentanglement_lib.data.ground_truth.celeba import process_path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
-parser.add_argument('--skip_p_value', action='store_false')
+parser.add_argument('--skip_p_value', action='store_true')
 args = parser.parse_args()
 
 THRESHOLDS = [2, 3, 4, 5]
@@ -70,7 +70,6 @@ for subject_num in subject_nums:
         n_voxels = np.sum(above_threshold)
         print('Number above threshold: {}'.format(n_voxels))
 
-        print('Model {}'.format(model_type))
         betas = sio.loadmat('betas/sub{:02d}_{}-beta.mat'.format(subject_num, model_type))
         betas = np.array(betas['data'][above_threshold]).transpose()
         latent_betas = betas[:LATENT_DIMENSION]
