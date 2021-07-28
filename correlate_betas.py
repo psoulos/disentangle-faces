@@ -55,8 +55,9 @@ TEST_STIMULI = {
                           'F14520.jpg', 'M14256.jpg']
 }
 
-print('Model {}'.format(model_dir))
-saved_model_dir = os.path.join('output', model_dir, 'tfhub')
+print('Model {}'.format(args.model_dir))
+model_name = '.'.join(args.model_dir.split('/'))
+saved_model_dir = os.path.join('output', args.model_dir, 'tfhub')
 model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
 stimulus_to_celeba = {}
@@ -67,22 +68,30 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
 for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
     roi_dir = os.path.join(args.subject_dir, 'vaegan-sub-{:02d}-all'.format(subject_num), 'roi')
-    roi_files = glob.glob(os.path.join(roi_dir, '*thresholded*.mat'))
+
+    left_roi_files = glob.glob(os.path.join(roi_dir, 'l*thresholded*.mat'))
+    right_roi_files = glob.glob(os.path.join(roi_dir, 'r*thresholded*.mat'))
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
-    for roi_file in roi_files:
-        roi = os.path.basename(roi_file).split('.')[0]
-        print('ROI: {}'.format(roi))
-        localizer_map = sio.loadmat(roi_file['threshold_roi'][0])
-        n_voxels = np.sum(localizer_map)
-        print('Number of voxels in {}: {}'.format(roi, n_voxels))
-        # TODO: I NEED TO LOAD THE BETAS, but first I Need to convert from nifti to matlab
+    for left_roi_file, right_roi_file in zip(left_roi_files, right_roi_files):
+        left_roi = os.path.basename(left_roi_file).split('.')[0]
+        right_roi = os.path.basename(right_roi_file).split('.')[0]
+
+        # Use > 0 to convert this to a boolean map
+        left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+        right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+        whole_brain_localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
+
+        n_voxels = np.sum(left_localizer_map) + np.sum(right_localizer_map)
+        print('Number of voxels in {}: {}'.format(left_roi, np.sum(left_localizer_map)))
+        print('Number of voxels in {}: {}'.format(right_roi, np.sum(right_localizer_map)))
+
         subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
-        betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(args.model_dir))
+        betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
-        betas = np.array(betas['betas'][localizer_map]).transpose()
+        betas = np.array(betas['betas'][whole_brain_localizer_map]).transpose()
         latent_betas = betas[:LATENT_DIMENSION]
         bias_beta = betas[LATENT_DIMENSION]
 
@@ -105,7 +114,7 @@ for subject_num in subject_nums:
 
             correlations_dir = os.path.join(subject_dir, 'correlations')
             pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
-            sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(args.model_dir, roi)), {'data': correlation})
+            sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, roi)), {'data': correlation})
             average_correlation = np.sum(correlation) / n_voxels
             print('Correlation: {}'.format(average_correlation))
 
