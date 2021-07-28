@@ -5,22 +5,25 @@ import numpy as np
 import scipy.io as sio
 from scipy.stats.stats import spearmanr
 import tensorflow as tf
+import glob
+import pathlib
 
 from disentanglement_lib.data.ground_truth.celeba import process_path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
 parser.add_argument('--skip_p_value', action='store_true')
+parser.add_argument('--model_dir', type=str, required=True)
+parser.add_argument('--subject_dir', type=str, required=True)
+parser.add_argument('--functionals_dir', type=str, required=True)
+
 args = parser.parse_args()
 
-THRESHOLDS = [2, 3, 4, 5]
-model_type = 'dvae'
+#THRESHOLDS = [2, 3, 4, 5]
+# TODO this variable shouldn't be used anymore
+#model_type = 'dvae'
 subject_nums = [1, 2, 3, 4]
 
-MODELS = {
-    'dvae': 'factor_vae_latent_24_gamma_24_try_1',
-    'vae': 'vae_latent_24_try_1'
-}
 LATENT_VARIABLE_OP_NAME = 'encoder/means/BiasAdd:0'
 sess = tf.Session()
 
@@ -52,8 +55,8 @@ TEST_STIMULI = {
                           'F14520.jpg', 'M14256.jpg']
 }
 
-print('Model {}'.format(model_type))
-saved_model_dir = os.path.join('output', MODELS[model_type], 'tfhub')
+print('Model {}'.format(model_dir))
+saved_model_dir = os.path.join('output', model_dir, 'tfhub')
 model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
 stimulus_to_celeba = {}
@@ -63,6 +66,51 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
 
 for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
+    roi_dir = os.path.join(args.subject_dir, 'vaegan-sub-{:02d}-all'.format(subject_num), 'roi')
+    roi_files = glob.glob(os.path.join(roi_dir, '*thresholded*.mat'))
+
+    test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
+
+    for roi_file in roi_files:
+        roi = os.path.basename(roi_file).split('.')[0]
+        print('ROI: {}'.format(roi))
+        localizer_map = sio.loadmat(roi_file['threshold_roi'][0])
+        n_voxels = np.sum(localizer_map)
+        print('Number of voxels in {}: {}'.format(roi, n_voxels))
+        # TODO: I NEED TO LOAD THE BETAS, but first I Need to convert from nifti to matlab
+        subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
+        betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(args.model_dir))
+        betas = sio.loadmat(betas_location)
+
+        betas = np.array(betas['betas'][localizer_map]).transpose()
+        latent_betas = betas[:LATENT_DIMENSION]
+        bias_beta = betas[LATENT_DIMENSION]
+
+        # The final betas are for the test images
+        ground_truth_voxels = betas[len(betas) - len(test_images):].transpose()
+
+        predicted_voxels = np.empty((len(test_images), n_voxels))
+        correlation = np.empty(n_voxels)
+        for index, test_image in enumerate(test_images):
+            celeba_file = os.path.join(args.celeba_dir, stimulus_to_celeba[test_image])
+            # (1 x 24)
+            latent_values = encode_img(celeba_file)
+            # (1 x n_voxels)
+            prediction = np.matmul(latent_values, latent_betas)
+            predicted_voxels[index] = prediction + bias_beta
+
+            predicted_voxels = predicted_voxels.transpose()
+            for i in range(len(correlation)):
+                correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
+
+            correlations_dir = os.path.join(subject_dir, 'correlations')
+            pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
+            sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(args.model_dir, roi)), {'data': correlation})
+            average_correlation = np.sum(correlation) / n_voxels
+            print('Correlation: {}'.format(average_correlation))
+
+    # ThIS IS OLD CODE fROM SVhRM and does the whole brain
+    '''
     localizer_map = sio.loadmat('localizer-maps/sub-{:02d}_sig.mat'.format(subject_num))['data'][0]
     for threshold in THRESHOLDS:
         print('Threshold {}'.format(threshold))
@@ -115,3 +163,4 @@ for subject_num in subject_nums:
                 # TODO save this array
             print('Number of correlation>null hypothesis correlation')
             print(np.sum(average_correlation > null_hypothesis_average_correlations))
+            '''
