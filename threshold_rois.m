@@ -2,12 +2,12 @@ assert(~(getenv('FIELDTRIP_DIR') == ""), 'You must first set the environment var
 assert(~(getenv('SUBJECTS_DIR') == ""), 'You must first set the environment variable SUBJECTS_DIR')
 assert(~(getenv('FUNCTIONALS_DIR') == ""), 'You must first set the environment variable FUNCTIONALS_DIR')
 
-addpath([getenv('FIELDTRIP_DIR/') '/external/freesurfer'])
+addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
 subject_nums = {1 2 3 4};
 hemis = {'l' 'r'};
 rois = {'FFA' 'OFA' 'STS'};
 for i = 1:length(subject_nums)
-    subject_num = subject_nums{1}
+    subject_num = subject_nums{i}
     roi_dir = ([getenv('SUBJECTS_DIR') '/vaegan-sub-0' num2str(subject_num) '-all/roi'])
     for j = 1:length(rois)
         roi = rois{j}
@@ -27,6 +27,7 @@ for i = 1:length(subject_nums)
            roi_surface.fspec = [roi_dir '/' hemi roi '.surf.thresholded.nii.gz'];
            
            MRIwrite(roi_surface, roi_surface.fspec)
+           save([roi_dir '/' hemi roi '.surf.thresholded.mat'], 'threshold_roi')
         end
     end
 end

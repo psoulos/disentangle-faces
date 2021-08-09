@@ -19,11 +19,17 @@ for i = 1:length(subject_nums)
     left_hemi_betas = MRIread([left_hemi_beta_dir '/beta.nii.gz']);
     right_hemi_betas = MRIread([right_hemi_beta_dir '/beta.nii.gz']);
     
+    left_hemi_all_rois = zeros(1, left_hemi_betas.nvoxels);
+    right_hemi_all_rois = zeros(1, right_hemi_betas.nvoxels);
+    
     for j = 1:length(rois)
-        roi = rois{j};
-        correlation = load([correlations_dir getenv('MODEL_NAME') '.' roi '.correlations.mat']).data;
-        left_roi = load([roi_dir 'l' roi '.surf.thresholded.mat']).threshold_roi;
-        right_roi = load([roi_dir 'r' roi '.surf.thresholded.mat']).threshold_roi;
+        roi = rois{j}
+        correlation = load([correlations_dir getenv('MODEL_NAME') '.' roi '.correlations.mat']);
+        correlation = correlation.data;
+        left_roi = load([roi_dir 'l' roi '.surf.thresholded.mat']);
+        left_roi = left_roi.threshold_roi;
+        right_roi = load([roi_dir 'r' roi '.surf.thresholded.mat']);
+        right_roi = right_roi.threshold_roi;
         
         left_correlations = correlation(1:sum(left_roi));
         right_correlations = correlation(sum(left_roi)+1:length(correlation));
@@ -41,25 +47,16 @@ for i = 1:length(subject_nums)
         right_hemi_betas.vol = expanded_right_correlations;
         right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.r' roi '.correlations.nii.gz'];
         MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
+        
+        left_hemi_all_rois = left_hemi_all_rois + expanded_left_correlations;
+        right_hemi_all_rois = right_hemi_all_rois + expanded_right_correlations;
     end
     
+    left_hemi_betas.vol = left_hemi_all_rois;
+    left_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.left.correlations.nii.gz'];
+    MRIwrite(left_hemi_betas, left_hemi_betas.fspec);
     
-    
-    left_hemi_beta_dir = [getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/' getenv('MODEL_NAME') '.lh'];
-    right_hemi_beta_dir = [getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/' getenv('MODEL_NAME') '.rh'];
-    
-    left_hemi_betas = MRIread([left_hemi_beta_dir '/beta.nii.gz']);
-    right_hemi_betas = MRIread([right_hemi_beta_dir '/beta.nii.gz']);
-    
-    left_hemi_labels = repmat({'lh'}, 1, left_hemi_betas.nvoxels);
-    right_hemi_labels = repmat({'rh'}, 1, right_hemi_betas.nvoxels);
-    hemi_labels = cat(2, left_hemi_labels, right_hemi_labels);
-    
-    % The two represents the face bias betas and the oneback betas which
-    % come between the latent dimensions and the test images
-    left_hemi_betas = squeeze(left_hemi_betas.vol(1,:,1,1:str2num(getenv('LATENT_DIMENSIONS'))+str2num(getenv('NUM_TEST_IMAGES'))+2));
-    right_hemi_betas = squeeze(right_hemi_betas.vol(1,:,1,1:str2num(getenv('LATENT_DIMENSIONS'))+str2num(getenv('NUM_TEST_IMAGES'))+2));
-    
-    betas = [left_hemi_betas; right_hemi_betas];
-    save([getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/' getenv('MODEL_NAME') '.betas.mat'], 'betas', 'hemi_labels')
+    right_hemi_betas.vol = right_hemi_all_rois;
+    right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.right.correlations.nii.gz'];
+    MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
 end

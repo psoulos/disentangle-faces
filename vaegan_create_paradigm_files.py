@@ -19,8 +19,8 @@ LOCALIZER_CONDITION_IDS = {
 }
 
 '''
-Condition 0 is fixation. Condition 1 through 24 are our latent dimensions. Condition 25 is one-back.
-Condition 26 through 46 are the 20 images shown multiple times.
+Condition 0 is fixation. Condition 1 through X are our latent dimensions. Condition X+1 is one-back.
+Condition X+2 through X+22 are the 20 images shown multiple times.
 '''
 FACE_RUN_FIX_CONDITION = 0
 LATENT_DIMENSION = 24
@@ -64,6 +64,8 @@ args = parser.parse_args()
 saved_model_dir = os.path.join('output', args.model_dir, 'tfhub')
 sess = tf.Session()
 model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
+
+paradigm_file_name = args.model_dir.replace('/', '.')
 
 subject_nums = range(1, 5)
 
@@ -110,7 +112,7 @@ for subject_num in subject_nums:
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(args.model_dir)), 'w')
+        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(paradigm_file_name)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):

@@ -4,9 +4,7 @@ assert(~(getenv('LATENT_DIMENSIONS') == ""), 'You must first set the environment
 assert(~(getenv('NUM_TEST_IMAGES') == ""), 'You must first set the environment variable NUM_TEST_IMAGES')
 assert(~(getenv('MODEL_NAME') == ""), 'You must first set the environment variable MODEL_NAME')
 
-%assert(~(getenv('SUBJECTS_DIR') == ""), 'You must first set the environment variable SUBJECTS_DIR')
-
-addpath([getenv('FIELDTRIP_DIR/') '/external/freesurfer'])
+addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
 subject_nums = {1 2 3 4};
 hemis = {'l' 'r'};
 rois = {'FFA' 'OFA' 'STS'};
