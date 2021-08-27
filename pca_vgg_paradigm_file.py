@@ -16,15 +16,6 @@ LATENT_VARIABLE_OP_NAME = 'fc7'
 DEFAULT_WEIGHT = 1.0
 FACE_RUNS_FILE_NAME = 'rlf_faces.txt'
 
-'''
-Condition 0 is fixation. Condition 1 through X are our latent dimensions. Condition X+1 is one-back.
-Condition X+2 through X+22 are the 20 images shown multiple times.
-'''
-FACE_RUN_FIX_CONDITION = 0
-LATENT_DIMENSION = 24
-FACE_BIAS_CONDITION_ID = LATENT_DIMENSION + 1
-FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 2
-TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 3
 TEST_STIMULI = {
     'vaegan-sub-01-all': ['M2553.jpg', 'F1631.jpg', 'M2424.jpg', 'F1235.jpg', 'F1148.jpg', 'M2156.jpg', 'F2376.jpg',
                           'M1584.jpg', 'M2466.jpg', 'F2068.jpg', 'F1586.jpg', 'F1232.jpg', 'M2203.jpg', 'M1365.jpg',
@@ -48,11 +39,20 @@ for subject_test_stimuli in TEST_STIMULI.values():
         ALL_TEST_STIMULI.append(test_stimuli)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', type=str, help='', required=True)
 parser.add_argument('--unpackdata_dir', type=str, help='', required=True)
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
+parser.add_argument('--n_components', type=float,
+                    help='The number of PCA components to use. When this is greater than 1, it needs to be an integer.'
+                         'When the value is between 0 and 1, this is used as the minimum variance explained and PCA'
+                         'will automatically find the number of components necessary to explain this variance',
+                    required=True)
 args = parser.parse_args()
 
+n_components = args.n_components
+if n_components > 1 and not n_components.is_integer():
+    raise Exception('args.n_components must be an integer if greater than 0')
+elif n_components > 1:
+    n_components = int(n_components)
 
 # Layer Features
 vgg_model = VGGFace()
@@ -68,8 +68,6 @@ def encode_img(img_file):
     return vgg_model_new.predict(x)
 
 
-paradigm_file_name = 'vgg{}'.format(LATENT_VARIABLE_OP_NAME)
-
 subject_nums = range(1, 5)
 
 consolidated_subject_dir_template = 'vaegan-sub-{:02d}-all'
@@ -78,6 +76,8 @@ stimulus_to_index = {}
 encodings = []
 i = 0
 for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
+    if i % 1000 == 0:
+        print(i)
     stimulus, celeba = line.split()
     if stimulus in ALL_TEST_STIMULI:
         continue
@@ -87,11 +87,24 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
     i += 1
     encodings.append(latent_values)
 
-pca = PCA(n_components=LATENT_DIMENSION)
+pca = PCA(n_components=n_components)
 encodings = np.array(encodings)
 pca_encodings = pca.fit_transform(encodings)
 with open('pca.pkl', 'wb') as pca_file:
     pickle.dump(pca, pca_file)
+print('PCA num components {}'.format(pca.n_components_))
+
+model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
+
+'''
+Condition 0 is fixation. Condition 1 through X are our latent dimensions. Condition X+1 is one-back.
+Condition X+2 through X+22 are the 20 images shown multiple times.
+'''
+FACE_RUN_FIX_CONDITION = 0
+LATENT_DIMENSION = pca.n_components_
+FACE_BIAS_CONDITION_ID = LATENT_DIMENSION + 1
+FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 2
+TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 3
 
 for subject_num in subject_nums:
     print('Processing subject {}'.format(subject_num))
@@ -104,7 +117,7 @@ for subject_num in subject_nums:
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(paradigm_file_name)), 'w')
+        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(model_name)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):
