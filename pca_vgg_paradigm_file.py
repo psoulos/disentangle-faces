@@ -90,11 +90,10 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
 pca = PCA(n_components=n_components)
 encodings = np.array(encodings)
 pca_encodings = pca.fit_transform(encodings)
-with open('pca.pkl', 'wb') as pca_file:
+model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
+with open('{}.pkl'.format(model_name), 'wb') as pca_file:
     pickle.dump(pca, pca_file)
 print('PCA num components {}'.format(pca.n_components_))
-
-model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
 
 '''
 Condition 0 is fixation. Condition 1 through X are our latent dimensions. Condition X+1 is one-back.

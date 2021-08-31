@@ -22,13 +22,14 @@ parser.add_argument('--celeba_dir', type=str, help='', required=True)
 parser.add_argument('--skip_p_value', action='store_true')
 parser.add_argument('--subject_dir', type=str, required=True)
 parser.add_argument('--functionals_dir', type=str, required=True)
-parser.add_argument('--pca_pickle', type=str, required=True)
+parser.add_argument('--n_components', type=str, required=True)
+parser.add_argument('--hidden_layer', type=str, required=True)
 
 args = parser.parse_args()
 
+model_name = 'vgg.{}.{}'.format(args.hidden_layer, args.n_components)
+
 #THRESHOLDS = [2, 3, 4, 5]
-# TODO this variable shouldn't be used anymore
-#model_type = 'dvae'
 subject_nums = [1, 2, 3, 4]
 
 TEST_STIMULI = {
@@ -48,11 +49,10 @@ TEST_STIMULI = {
                           'F14520.jpg', 'M14256.jpg']
 }
 
-LATENT_VARIABLE_OP_NAME = 'fc7'
-pca = pickle.load(open(args.pca_pickle, 'rb'))
-latent_dimensions = pca.singular_values_.shape[0]
+_, latent_variable_op_name, latent_dimensions, _ = args.pca_pickle.split('.')
+pca = pickle.load(open('{}.pkl'.format(model_name), 'rb'))
 vgg_model = VGGFace()
-out = vgg_model.get_layer(LATENT_VARIABLE_OP_NAME).output
+out = vgg_model.get_layer(latent_variable_op_name).output
 vgg_model_new = Model(vgg_model.input, out)
 
 def encode_img(img_file):
@@ -60,7 +60,7 @@ def encode_img(img_file):
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = utils.preprocess_input(x, version=1)  # or version=2
-    latent_encoding = vgg_model_new.predict(x).squeeze()
+    latent_encoding = vgg_model_new.predict(x)
     return pca.transform(latent_encoding)
 
 
@@ -92,7 +92,9 @@ for subject_num in subject_nums:
         print('Number of voxels in {}: {}'.format(right_roi, np.sum(right_localizer_map)))
 
         subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
-        betas_location = os.path.join(subject_dir, 'vgg.{}.betas.mat'.format(args.pca_pickle))
+        # TODO: convert nifti betas to mat for this correlation
+        # TODO: update this code to use model name for the pickle and the beta file
+        betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
         betas = np.array(betas['betas'][whole_brain_localizer_map]).transpose()
@@ -118,7 +120,7 @@ for subject_num in subject_nums:
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
-        sio.savemat(os.path.join(correlations_dir, 'vgg.{}.{}.correlations.mat'.format(args.pca_pickle, left_roi[1:])), {'data': correlation})
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, left_roi[1:])), {'data': correlation})
         average_correlation = np.sum(correlation) / n_voxels
         print('Correlation: {}'.format(average_correlation))
 
