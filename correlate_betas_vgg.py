@@ -22,7 +22,7 @@ parser.add_argument('--celeba_dir', type=str, help='', required=True)
 parser.add_argument('--skip_p_value', action='store_true')
 parser.add_argument('--subject_dir', type=str, required=True)
 parser.add_argument('--functionals_dir', type=str, required=True)
-parser.add_argument('--n_components', type=str, required=True)
+parser.add_argument('--n_components', type=int, required=True)
 parser.add_argument('--hidden_layer', type=str, required=True)
 
 args = parser.parse_args()
@@ -49,10 +49,9 @@ TEST_STIMULI = {
                           'F14520.jpg', 'M14256.jpg']
 }
 
-_, latent_variable_op_name, latent_dimensions, _ = args.pca_pickle.split('.')
 pca = pickle.load(open('{}.pkl'.format(model_name), 'rb'))
 vgg_model = VGGFace()
-out = vgg_model.get_layer(latent_variable_op_name).output
+out = vgg_model.get_layer(args.hidden_layer).output
 vgg_model_new = Model(vgg_model.input, out)
 
 def encode_img(img_file):
@@ -92,14 +91,12 @@ for subject_num in subject_nums:
         print('Number of voxels in {}: {}'.format(right_roi, np.sum(right_localizer_map)))
 
         subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
-        # TODO: convert nifti betas to mat for this correlation
-        # TODO: update this code to use model name for the pickle and the beta file
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
         betas = np.array(betas['betas'][whole_brain_localizer_map]).transpose()
-        latent_betas = betas[:latent_dimensions]
-        bias_beta = betas[latent_dimensions]
+        latent_betas = betas[:args.n_components]
+        bias_beta = betas[args.n_components]
 
         # The final betas are for the test images
         ground_truth_voxels = betas[len(betas) - len(test_images):].transpose()

@@ -69,8 +69,8 @@ for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
     roi_dir = os.path.join(args.subject_dir, 'vaegan-sub-{:02d}-all'.format(subject_num), 'roi')
 
-    left_roi_files = glob.glob(os.path.join(roi_dir, 'l*thresholded*.mat'))
-    right_roi_files = glob.glob(os.path.join(roi_dir, 'r*thresholded*.mat'))
+    left_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'l*thresholded*.mat')))
+    right_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'r*thresholded*.mat')))
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
@@ -108,15 +108,15 @@ for subject_num in subject_nums:
             prediction = np.matmul(latent_values, latent_betas)
             predicted_voxels[index] = prediction + bias_beta
 
-            predicted_voxels = predicted_voxels.transpose()
-            for i in range(len(correlation)):
-                correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
+        predicted_voxels = predicted_voxels.transpose()
+        for i in range(len(correlation)):
+            correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
 
-            correlations_dir = os.path.join(subject_dir, 'correlations')
-            pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
-            sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, roi)), {'data': correlation})
-            average_correlation = np.sum(correlation) / n_voxels
-            print('Correlation: {}'.format(average_correlation))
+        correlations_dir = os.path.join(subject_dir, 'correlations')
+        pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, left_roi[1:])), {'data': correlation})
+        average_correlation = np.sum(correlation) / n_voxels
+        print('Correlation: {}'.format(average_correlation))
 
     # ThIS IS OLD CODE fROM SVhRM and does the whole brain
     '''

@@ -89,7 +89,12 @@ for line in open('stimuli/ImageNames2Celeba.txt', 'r'):
 
 pca = PCA(n_components=n_components)
 encodings = np.array(encodings)
-pca_encodings = pca.fit_transform(encodings)
+if n_components == 4096:
+    # Don't perform PCA, just return the default VGG encodings
+    pca_encodings = encodings
+    pca.transform = lambda x: x
+else:
+    pca_encodings = pca.fit_transform(encodings)
 model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
 with open('{}.pkl'.format(model_name), 'wb') as pca_file:
     pickle.dump(pca, pca_file)

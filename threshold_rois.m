@@ -14,7 +14,7 @@ for i = 1:length(subject_nums)
         for k = 1:length(hemis)
            hemi = hemis{k}
            roi_surface = MRIread([roi_dir '/' hemi roi '.surf.nii.gz']);
-           significance = MRIread([getenv('SUBJECTS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/vaegan-localizer-sm5-' hemi 'h/faces-constrast-objects/sig.nii.gz']);
+           significance = MRIread([getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/vaegan-localizer-sm5-' hemi 'h/faces-constrast-objects/sig.nii.gz']);
            roi_significance = significance.vol;
            roi_significance(roi_surface.vol == 0) = 0;
            num_voxels = sum(roi_surface.vol)
