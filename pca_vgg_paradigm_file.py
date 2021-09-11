@@ -46,6 +46,7 @@ parser.add_argument('--n_components', type=float,
                          'When the value is between 0 and 1, this is used as the minimum variance explained and PCA'
                          'will automatically find the number of components necessary to explain this variance',
                     required=True)
+parser.add_argument('--tag', type=str, default='', help='A tag to add to the saved model name')
 args = parser.parse_args()
 
 n_components = args.n_components
@@ -92,10 +93,16 @@ encodings = np.array(encodings)
 if n_components == 4096:
     # Don't perform PCA, just return the default VGG encodings
     pca_encodings = encodings
-    pca.transform = lambda x: x
+    def identity(x):
+        return x
+    pca.transform = identity
+    pca.n_components_ = 4096
 else:
     pca_encodings = pca.fit_transform(encodings)
-model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
+if args.tag:
+    model_name = 'vgg.{}.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_, args.tag)
+else:
+    model_name = 'vgg.{}.{}'.format(LATENT_VARIABLE_OP_NAME, pca.n_components_)
 with open('{}.pkl'.format(model_name), 'wb') as pca_file:
     pickle.dump(pca, pca_file)
 print('PCA num components {}'.format(pca.n_components_))
@@ -106,9 +113,17 @@ Condition X+2 through X+22 are the 20 images shown multiple times.
 '''
 FACE_RUN_FIX_CONDITION = 0
 LATENT_DIMENSION = pca.n_components_
+
+# Used for face bias
+'''
 FACE_BIAS_CONDITION_ID = LATENT_DIMENSION + 1
 FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 2
 TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 3
+'''
+
+# Without face bias
+FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 1
+TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 2
 
 for subject_num in subject_nums:
     print('Processing subject {}'.format(subject_num))
@@ -180,6 +195,7 @@ for subject_num in subject_nums:
                         stimulus_filename
                     ))
 
+            '''
             paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
                 onset,
                 FACE_BIAS_CONDITION_ID,
@@ -187,3 +203,4 @@ for subject_num in subject_nums:
                 DEFAULT_WEIGHT,
                 stimulus_filename
             ))
+            '''
