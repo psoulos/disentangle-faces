@@ -47,6 +47,7 @@ parser.add_argument('--n_components', type=float,
                          'will automatically find the number of components necessary to explain this variance',
                     required=True)
 parser.add_argument('--tag', type=str, default='', help='A tag to add to the saved model name')
+parser.add_argument('--split_test', action='store_true', help='Split each test image into two conditions.')
 args = parser.parse_args()
 
 n_components = args.n_components
@@ -115,16 +116,16 @@ FACE_RUN_FIX_CONDITION = 0
 LATENT_DIMENSION = pca.n_components_
 
 # Used for face bias
-'''
+
 FACE_BIAS_CONDITION_ID = LATENT_DIMENSION + 1
 FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 2
 TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 3
-'''
 
 # Without face bias
+'''
 FACE_RUN_ONEBACK_CONDITION = LATENT_DIMENSION + 1
 TEST_STIMULI_CONDITION_OFFSET = LATENT_DIMENSION + 2
-
+'''
 for subject_num in subject_nums:
     print('Processing subject {}'.format(subject_num))
     consolidated_subject_name = consolidated_subject_dir_template.format(subject_num)
@@ -132,6 +133,9 @@ for subject_num in subject_nums:
     consolidated_subject_bold_dir = os.path.join(consolidated_subject_dir, 'bold')
 
     test_stimuli = TEST_STIMULI[consolidated_subject_name]
+    test_stimuli_counter = {}
+    for file in test_stimuli:
+        test_stimuli_counter[file] = 0
     for face_run in open(os.path.join(consolidated_subject_bold_dir, FACE_RUNS_FILE_NAME), 'r'):
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
@@ -174,7 +178,13 @@ for subject_num in subject_nums:
                 ))
             elif base_filename in test_stimuli:
                 print('found test stimuli')
-                condition_id = test_stimuli.index(base_filename) + TEST_STIMULI_CONDITION_OFFSET
+                if args.split_test:
+                    condition_id = test_stimuli.index(base_filename) * 2 + TEST_STIMULI_CONDITION_OFFSET
+                    if test_stimuli_counter[base_filename] % 2:
+                        condition_id += 1
+                else:
+                    condition_id = test_stimuli.index(base_filename) + TEST_STIMULI_CONDITION_OFFSET
+                test_stimuli_counter[base_filename] += 1
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
                     onset,
                     condition_id,
@@ -194,13 +204,10 @@ for subject_num in subject_nums:
                         value,
                         stimulus_filename
                     ))
-
-            '''
-            paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
-                onset,
-                FACE_BIAS_CONDITION_ID,
-                duration,
-                DEFAULT_WEIGHT,
-                stimulus_filename
-            ))
-            '''
+                paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
+                    onset,
+                    FACE_BIAS_CONDITION_ID,
+                    duration,
+                    DEFAULT_WEIGHT,
+                    stimulus_filename
+                ))
