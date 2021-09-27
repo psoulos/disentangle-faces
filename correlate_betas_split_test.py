@@ -4,11 +4,8 @@ import os
 import numpy as np
 import scipy.io as sio
 from scipy.stats.stats import spearmanr
-import tensorflow as tf
 import glob
 import pathlib
-
-from disentanglement_lib.data.ground_truth.celeba import process_path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
@@ -93,12 +90,15 @@ for subject_num in subject_nums:
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
         sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format('vgg.fc7.24.split_test', left_roi[1:])), {'data': correlation})
-        left_correlation = np.sum(correlation[:n_left_voxels]) / n_left_voxels
-        right_correlation = np.sum(correlation[n_left_voxels+1:]) / n_right_voxels
-        average_correlation = np.sum(correlation) / n_voxels
-        print('Correlation: {}'.format(average_correlation))
-        print('Left correlation: {}'.format(left_correlation))
-        print('Right correlation: {}'.format(right_correlation))
+        left_correlation = np.mean(correlation[:n_left_voxels])
+        left_std = np.std(correlation[:n_left_voxels])
+        right_correlation = np.mean(correlation[n_left_voxels+1:])
+        right_std = np.std(correlation[n_left_voxels+1:])
+        average_correlation = np.mean(correlation)
+        std = np.std(correlation)
+        print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
+        print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(left_correlation, left_std))
+        print('Right correlation: {:.3f} \u00B1 {:.3f}'.format(right_correlation, right_std))
 
     # ThIS IS OLD CODE fROM SVhRM and does the whole brain
     '''
