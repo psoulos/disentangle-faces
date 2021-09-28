@@ -92,13 +92,13 @@ for subject_num in subject_nums:
         sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format('vgg.fc7.24.split_test', left_roi[1:])), {'data': correlation})
         left_correlation = np.mean(correlation[:n_left_voxels])
         left_std = np.std(correlation[:n_left_voxels])
-        right_correlation = np.mean(correlation[n_left_voxels+1:])
-        right_std = np.std(correlation[n_left_voxels+1:])
+        right_correlation = np.mean(correlation[n_left_voxels:])
+        right_std = np.std(correlation[n_left_voxels:])
         average_correlation = np.mean(correlation)
         std = np.std(correlation)
         print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
         print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(left_correlation, left_std))
-        print('Right correlation: {:.3f} \u00B1 {:.3f}'.format(right_correlation, right_std))
+        print('Right correlation: {:.3f} \u00B1 {:.3f}\n'.format(right_correlation, right_std))
 
     # ThIS IS OLD CODE fROM SVhRM and does the whole brain
     '''

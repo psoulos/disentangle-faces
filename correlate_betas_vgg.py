@@ -2,10 +2,8 @@ import argparse
 import os
 import pickle
 
-import numpy as np
 import scipy.io as sio
 from scipy.stats.stats import spearmanr
-import tensorflow as tf
 import glob
 import pathlib
 
@@ -14,7 +12,6 @@ from keras_vggface.vggface import VGGFace
 from keras.engine import Model
 from keras_vggface import utils
 from keras.preprocessing import image
-from sklearn.decomposition import PCA
 
 
 parser = argparse.ArgumentParser()
@@ -24,10 +21,14 @@ parser.add_argument('--subject_dir', type=str, required=True)
 parser.add_argument('--functionals_dir', type=str, required=True)
 parser.add_argument('--n_components', type=int, required=True)
 parser.add_argument('--hidden_layer', type=str, required=True)
+parser.add_argument('--tag', type=str, required=False)
 
 args = parser.parse_args()
 
-model_name = 'vgg.{}.{}'.format(args.hidden_layer, args.n_components)
+if args.tag:
+    model_name = 'vgg.{}.{}.{}'.format(args.hidden_layer, args.n_components, args.tag)
+else:
+    model_name = 'vgg.{}.{}'.format(args.hidden_layer, args.n_components)
 
 #THRESHOLDS = [2, 3, 4, 5]
 subject_nums = [1, 2, 3, 4]
@@ -86,6 +87,7 @@ for subject_num in subject_nums:
         right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
         whole_brain_localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
 
+        n_left_voxels = np.sum(left_localizer_map)
         n_voxels = np.sum(left_localizer_map) + np.sum(right_localizer_map)
         print('Number of voxels in {}: {}'.format(left_roi, np.sum(left_localizer_map)))
         print('Number of voxels in {}: {}'.format(right_roi, np.sum(right_localizer_map)))
@@ -118,8 +120,15 @@ for subject_num in subject_nums:
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
         sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, left_roi[1:])), {'data': correlation})
-        average_correlation = np.sum(correlation) / n_voxels
-        print('Correlation: {}'.format(average_correlation))
+        left_correlation = np.mean(correlation[:n_left_voxels])
+        left_std = np.std(correlation[:n_left_voxels])
+        right_correlation = np.mean(correlation[n_left_voxels:])
+        right_std = np.std(correlation[n_left_voxels:])
+        average_correlation = np.mean(correlation)
+        std = np.std(correlation)
+        print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
+        print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(left_correlation, left_std))
+        print('Right correlation: {:.3f} \u00B1 {:.3f}\n'.format(right_correlation, right_std))
 
     # ThIS IS OLD CODE fROM SVhRM and does the whole brain
     '''
