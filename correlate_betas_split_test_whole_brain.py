@@ -75,7 +75,7 @@ for subject_num in subject_nums:
     correlations_dir = os.path.join(subject_dir, 'correlations')
     pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
 
-    sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format('vgg.fc7.24.split_test', 'whole_brain'), {'data': correlation}))
+    sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format('vgg.fc7.24.split_test', 'whole_brain')), {'data': correlation})
     average_correlation = np.mean(correlation)
     std = np.std(correlation)
     print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))

@@ -14,8 +14,26 @@ for i = 1:length(subject_nums)
         for k = 1:length(hemis)
            hemi = hemis{k}
            roi_surface = MRIread([roi_dir '/' hemi roi '.surf.nii.gz']);
-           significance = MRIread([getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/vaegan-localizer-sm5-' hemi 'h/faces-constrast-objects/sig.nii.gz']);
-           roi_significance = significance.vol;
+           localizer = MRIread([getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/vaegan-localizer-sm5-' hemi 'h/faces-constrast-objects/sig.nii.gz']);
+           localizer = normalize(localizer.vol);
+           reliability = MRIread([getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(subject_num) '-all/bold/correlations/vgg.fc7.24.split_test.' hemi 'whole_brain.correlations.nii.gz']);
+           reliability = normalize(reliability.vol);
+           % Find mean of reliability in the parcel
+           % Print the mean reliability and std of each ROI
+           % Use the mean as a threshold and zero out everything in the
+           % localizer that doesn't meet the threshold
+           % Take the top 10% of the localizer
+           % Make 
+           
+           
+           % On the other hand, maybe just try the blend of reliability and
+           % localizer
+           % Z score first
+           % Combine them
+           % take the top 10 percent
+           
+           %roi_significance = significance.vol;
+           roi_significance = localizer + reliability;
            roi_significance(roi_surface.vol == 0) = 0;
            num_voxels = sum(roi_surface.vol)
            num_top10 = floor(num_voxels / 10)
@@ -24,10 +42,10 @@ for i = 1:length(subject_nums)
            threshold_roi(indices(num_top10+1:end)) = 0;
            
            roi_surface.vol = threshold_roi;
-           roi_surface.fspec = [roi_dir '/' hemi roi '.surf.thresholded.nii.gz'];
+           roi_surface.fspec = [roi_dir '/' hemi roi '.surf.thresholded.both.nii.gz'];
            
            MRIwrite(roi_surface, roi_surface.fspec)
-           save([roi_dir '/' hemi roi '.surf.thresholded.mat'], 'threshold_roi')
+           save([roi_dir '/' hemi roi '.surf.thresholded.both.mat'], 'threshold_roi')
         end
     end
 end
