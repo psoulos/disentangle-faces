@@ -59,6 +59,7 @@ parser.add_argument('--model_dir', type=str, help='', required=True)
 parser.add_argument('--unpackdata_dir', type=str, help='', required=True)
 parser.add_argument('--celeba_dir', type=str, help='', required=True)
 parser.add_argument('--do_localizer', action='store_true', required=False)
+parser.add_argument('--tag', type=str, default='', help='A tag to add to the saved model name')
 args = parser.parse_args()
 
 saved_model_dir = os.path.join('output', args.model_dir, 'tfhub')
@@ -112,7 +113,10 @@ for subject_num in subject_nums:
         print('Processing face run {}'.format(face_run))
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
-        paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(paradigm_file_name)), 'w')
+        if args.tag:
+            paradigm_file = open(os.path.join(face_run_dir, '{}.{}.dyn.para'.format(args.tag, paradigm_file_name)), 'w')
+        else:
+            paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(paradigm_file_name)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]
         onset = 0
         for event_line in open(event_file, 'r'):
@@ -174,10 +178,10 @@ for subject_num in subject_nums:
                         stimulus_filename
                     ))
 
-            paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
-                onset,
-                FACE_BIAS_CONDITION_ID,
-                duration,
-                DEFAULT_WEIGHT,
-                stimulus_filename
-            ))
+                paradigm_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
+                    onset,
+                    FACE_BIAS_CONDITION_ID,
+                    duration,
+                    DEFAULT_WEIGHT,
+                    stimulus_filename
+                ))
