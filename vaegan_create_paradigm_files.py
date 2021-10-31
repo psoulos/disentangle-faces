@@ -114,7 +114,7 @@ for subject_num in subject_nums:
         face_run_dir = os.path.join(consolidated_subject_bold_dir, '{:03d}'.format(int(face_run)))
         # Convert the events file from OpenNeuro to Freesurfer paradigm format
         if args.tag:
-            paradigm_file = open(os.path.join(face_run_dir, '{}.{}.dyn.para'.format(args.tag, paradigm_file_name)), 'w')
+            paradigm_file = open(os.path.join(face_run_dir, '{}.{}.dyn.para'.format(paradigm_file_name, args.tag)), 'w')
         else:
             paradigm_file = open(os.path.join(face_run_dir, '{}.dyn.para'.format(paradigm_file_name)), 'w')
         event_file = glob.glob(os.path.join(face_run_dir, '*.tsv'))[0]

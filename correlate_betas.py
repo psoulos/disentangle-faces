@@ -57,6 +57,8 @@ TEST_STIMULI = {
 
 print('Model {}'.format(args.model_dir))
 model_name = '.'.join(args.model_dir.split('/'))
+if args.tag:
+    model_name = '{}.{}'.format(model_name, args.tag)
 saved_model_dir = os.path.join('output', args.model_dir, 'tfhub')
 model = tf.saved_model.load(export_dir=saved_model_dir, tags=[], sess=sess)
 
@@ -69,8 +71,8 @@ for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
     roi_dir = os.path.join(args.subject_dir, 'vaegan-sub-{:02d}-all'.format(subject_num), 'roi')
 
-    left_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'l*thresholded*.mat')))
-    right_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'r*thresholded*.mat')))
+    left_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'l*thresholded.both*.mat')))
+    right_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'r*thresholded.both*.mat')))
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
