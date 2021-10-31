@@ -16,7 +16,7 @@ parser.add_argument('--skip_p_value', action='store_true')
 parser.add_argument('--model_dir', type=str, required=True)
 parser.add_argument('--subject_dir', type=str, required=True)
 parser.add_argument('--functionals_dir', type=str, required=True)
-
+parser.add_argument('--tag', type=str, required=False)
 args = parser.parse_args()
 
 #THRESHOLDS = [2, 3, 4, 5]
