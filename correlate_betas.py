@@ -80,31 +80,31 @@ for subject_num in subject_nums:
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
     for left_roi_file, right_roi_file in zip(left_roi_files, right_roi_files):
-        left_roi = os.path.basename(left_roi_file).split('.')[0]
-        right_roi = os.path.basename(right_roi_file).split('.')[0]
-
-        # Use > 0 to convert this to a boolean map
-        left_localizer_map =
-        right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
-        whole_brain_localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
-
-        if args.hemi == 'left':
-            localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
-        elif args.hemi == 'right':
-            localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
-        else:
-            left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
-            right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
-            localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
-
-        n_voxels = np.sum(localizer_map)
-        print('Number of voxels: {}'.format(n_voxels))
-
         subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
-        betas = np.array(betas['betas'][localizer_map]).transpose()
+        left_roi = os.path.basename(left_roi_file).split('.')[0]
+        right_roi = os.path.basename(right_roi_file).split('.')[0]
+
+        if args.hemi == 'left':
+            localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            # Take the first n dimensions which correspond to voxels in the left hemi
+            betas = np.array(betas['betas'][:len(localizer_map)][localizer_map]).transpose()
+        elif args.hemi == 'right':
+            localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            # Take the last n dimensions which correspond to voxels in the right hemi
+            betas = np.array(betas['betas'][-len(localizer_map):][localizer_map]).transpose()
+        else:
+            left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
+            betas = np.array(betas['betas'][localizer_map]).transpose()
+
+        n_voxels = np.sum(localizer_map)
+        print('Number of voxels: {}'.format(n_voxels))
+
+
         latent_betas = betas[:LATENT_DIMENSION]
         bias_beta = betas[LATENT_DIMENSION]
 
