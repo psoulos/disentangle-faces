@@ -22,8 +22,10 @@ parser.add_argument('--functionals_dir', type=str, required=True)
 parser.add_argument('--n_components', type=int, required=True)
 parser.add_argument('--hidden_layer', type=str, required=True)
 parser.add_argument('--tag', type=str, required=False)
-
+parser.add_argument('--hemi', type=str, default='right', required=False, help='Which hemisphere to process. Must be one of [left, right, whole].')
 args = parser.parse_args()
+
+assert(args.hemi in ['left', 'right', 'whole'])
 
 if args.tag:
     model_name = 'vgg.{}.{}.{}'.format(args.hidden_layer, args.n_components, args.tag)
@@ -79,24 +81,31 @@ for subject_num in subject_nums:
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
     for left_roi_file, right_roi_file in zip(left_roi_files, right_roi_files):
-        left_roi = os.path.basename(left_roi_file).split('.')[0]
-        right_roi = os.path.basename(right_roi_file).split('.')[0]
-
-        # Use > 0 to convert this to a boolean map
-        left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
-        right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
-        whole_brain_localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
-
-        n_left_voxels = np.sum(left_localizer_map)
-        n_voxels = np.sum(left_localizer_map) + np.sum(right_localizer_map)
-        print('Number of voxels in {}: {}'.format(left_roi, np.sum(left_localizer_map)))
-        print('Number of voxels in {}: {}'.format(right_roi, np.sum(right_localizer_map)))
-
-        subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
+        subject_dir = os.path.join(args.functionals_dir,
+                                   'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
-        betas = np.array(betas['betas'][whole_brain_localizer_map]).transpose()
+        left_roi = os.path.basename(left_roi_file).split('.')[0]
+        right_roi = os.path.basename(right_roi_file).split('.')[0]
+
+        if args.hemi == 'left':
+            localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            # Take the first n dimensions which correspond to voxels in the left hemi
+            betas = np.array(betas['betas'][:len(localizer_map)][localizer_map]).transpose()
+        elif args.hemi == 'right':
+            localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            # Take the last n dimensions which correspond to voxels in the right hemi
+            betas = np.array(betas['betas'][-len(localizer_map):][localizer_map]).transpose()
+        else:
+            left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
+            betas = np.array(betas['betas'][localizer_map]).transpose()
+
+        n_voxels = np.sum(localizer_map)
+        print('Number of voxels: {}'.format(n_voxels))
+
         latent_betas = betas[:args.n_components]
         bias_beta = betas[args.n_components]
 
@@ -119,53 +128,11 @@ for subject_num in subject_nums:
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
-        sio.savemat(os.path.join(correlations_dir, '{}.{}.correlations.mat'.format(model_name, left_roi[1:])), {'data': correlation})
-        left_correlation = np.mean(correlation[:n_left_voxels])
-        left_std = np.std(correlation[:n_left_voxels])
-        right_correlation = np.mean(correlation[n_left_voxels:])
-        right_std = np.std(correlation[n_left_voxels:])
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': correlation})
+
         average_correlation = np.mean(correlation)
         std = np.std(correlation)
         print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
-        print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(left_correlation, left_std))
-        print('Right correlation: {:.3f} \u00B1 {:.3f}\n'.format(right_correlation, right_std))
-
-    # ThIS IS OLD CODE fROM SVhRM and does the whole brain
-    '''
-    localizer_map = sio.loadmat('localizer-maps/sub-{:02d}_sig.mat'.format(subject_num))['data'][0]
-    for threshold in THRESHOLDS:
-        print('Threshold {}'.format(threshold))
-        above_threshold = localizer_map > threshold
-        n_voxels = np.sum(above_threshold)
-        print('Number above threshold: {}'.format(n_voxels))
-
-        betas = sio.loadmat('betas/sub{:02d}_{}-beta.mat'.format(subject_num, model_type))
-        betas = np.array(betas['data'][above_threshold]).transpose()
-        latent_betas = betas[:LATENT_DIMENSION]
-        bias_beta = betas[LATENT_DIMENSION]
-
-        test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
-
-        # The final betas are for the test images
-        ground_truth_voxels = betas[len(betas) - len(test_images):].transpose()
-
-        predicted_voxels = np.empty((len(test_images), n_voxels))
-        correlation = np.empty(n_voxels)
-        for index, test_image in enumerate(test_images):
-            celeba_file = os.path.join(args.celeba_dir, stimulus_to_celeba[test_image])
-            # (1 x 24)
-            latent_values = encode_img(celeba_file)
-            # (1 x n_voxels)
-            prediction = np.matmul(latent_values, latent_betas)
-            predicted_voxels[index] = prediction + bias_beta
-
-        predicted_voxels = predicted_voxels.transpose()
-        for i in range(len(correlation)):
-            correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
-
-        sio.savemat('subject{}-{}.mat'.format(subject_num, model_type), {'data': correlation})
-        average_correlation = np.sum(correlation) / n_voxels
-        print('Correlation: {}'.format(average_correlation))
 
         if not args.skip_p_value:
             # Generate samples from a null distribution for significance testing
@@ -178,10 +145,10 @@ for subject_num in subject_nums:
                 # Shuffle the conditions within each voxels
                 np.apply_along_axis(np.random.shuffle, 1, null_hypothesis_ground_truth)
                 for j in range(len(correlation)):
-                    null_hypothesis_correlation[j] = spearmanr(predicted_voxels[j], null_hypothesis_ground_truth[j]).correlation
+                    null_hypothesis_correlation[j] = spearmanr(predicted_voxels[j],
+                                                               null_hypothesis_ground_truth[j]).correlation
                 # Threshold the null hypothesis correlation
                 null_hypothesis_average_correlations[i] = np.sum(null_hypothesis_correlation) / n_voxels
                 # TODO save this array
             print('Number of correlation>null hypothesis correlation')
             print(np.sum(average_correlation > null_hypothesis_average_correlations))
-            '''

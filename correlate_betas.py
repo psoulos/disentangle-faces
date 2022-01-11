@@ -104,7 +104,6 @@ for subject_num in subject_nums:
         n_voxels = np.sum(localizer_map)
         print('Number of voxels: {}'.format(n_voxels))
 
-
         latent_betas = betas[:LATENT_DIMENSION]
         bias_beta = betas[LATENT_DIMENSION]
 
@@ -151,26 +150,3 @@ for subject_num in subject_nums:
                 # TODO save this array
             print('Number of correlation>null hypothesis correlation')
             print(np.sum(average_correlation > null_hypothesis_average_correlations))
-
-'''
-For every voxel in ROI (ex FFA has 100 voxels)
-FactorVAE we have 100 correlation values
-VGG we have 100 correlation values
-
-Are the Factor values higher than the VGG values?
-Generate a test vector where for each of the 100 voxels, we randomly choose the value from the correpsonding voxel in either Factor or VGG
-ex: 
-test_vector1 = [factor1, factor2, factor3, vgg4, factor5, vgg6,....]
-Generate the opposite vector
-test_vector2 = [vgg1, vgg2, vgg3, factor4, vgg5, factor6,...]
-
-test_vector = test_vector1-test_vector2
-avg(test_vector)
-
-Do this 1000 times to generate our null distribution
-
-Then take
-difference = factor-vgg (1x100)
-avg(difference)
-print(np.sum(difference > null_dist))
-'''
