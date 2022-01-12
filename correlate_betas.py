@@ -78,6 +78,12 @@ for subject_num in subject_nums:
     left_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'l*thresholded.both*.mat')))
     right_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'r*thresholded.both*.mat')))
 
+    # If we are skipping localizers, we will only use one ROI file and use that file to get the number of voxels in each
+    # hemisphere rather than the ROI voxel locations
+    if args.skip_localizer:
+        left_roi_files = [left_roi_files[0]]
+        right_roi_files = [right_roi_files[0]]
+
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
     for left_roi_file, right_roi_file in zip(left_roi_files, right_roi_files):
@@ -85,8 +91,7 @@ for subject_num in subject_nums:
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
-        left_roi = os.path.basename(left_roi_file).split('.')[0]
-        right_roi = os.path.basename(right_roi_file).split('.')[0]
+        left_roi = os.path.basename(left_roi_file).split('.')[0] if not args.skip_localizer else 'all'
 
         if args.hemi == 'left':
             localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
@@ -133,6 +138,7 @@ for subject_num in subject_nums:
         predicted_voxels = predicted_voxels.transpose()
         for i in range(len(correlation)):
             correlation[i] = spearmanr(predicted_voxels[i], ground_truth_voxels[i]).correlation
+        correlation[np.isnan(correlation)] = 0
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
