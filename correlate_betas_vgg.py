@@ -23,6 +23,7 @@ parser.add_argument('--n_components', type=int, required=True)
 parser.add_argument('--hidden_layer', type=str, required=True)
 parser.add_argument('--tag', type=str, required=False)
 parser.add_argument('--hemi', type=str, default='right', required=False, help='Which hemisphere to process. Must be one of [left, right, whole].')
+parser.add_argument('--skip_localizer', action='store_true')
 args = parser.parse_args()
 
 assert(args.hemi in ['left', 'right', 'whole'])
@@ -91,16 +92,25 @@ for subject_num in subject_nums:
 
         if args.hemi == 'left':
             localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            # Use all voxels if we don't want to use the localizer
+            if args.skip_localizer:
+                localizer_map = np.ones_like(localizer_map)
             # Take the first n dimensions which correspond to voxels in the left hemi
             betas = np.array(betas['betas'][:len(localizer_map)][localizer_map]).transpose()
         elif args.hemi == 'right':
             localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            # Use all voxels if we don't want to use the localizer
+            if args.skip_localizer:
+                localizer_map = np.ones_like(localizer_map)
             # Take the last n dimensions which correspond to voxels in the right hemi
             betas = np.array(betas['betas'][-len(localizer_map):][localizer_map]).transpose()
         else:
             left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
             right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
             localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
+            # Use all voxels if we don't want to use the localizer
+            if args.skip_localizer:
+                localizer_map = np.ones_like(localizer_map)
             betas = np.array(betas['betas'][localizer_map]).transpose()
 
         n_voxels = np.sum(localizer_map)
