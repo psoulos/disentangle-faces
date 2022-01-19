@@ -142,6 +142,8 @@ for subject_num in subject_nums:
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.predicted_voxels.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': predicted_voxels})
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.ground_truth.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': ground_truth_voxels})
         sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': correlation})
 
         average_correlation = np.mean(correlation)

@@ -56,9 +56,9 @@ VGG we have 100 correlation values
 Are the Factor values higher than the VGG values?
 Generate a test vector where for each of the 100 voxels, we randomly choose the value from the correpsonding voxel in either Factor or VGG
 ex: 
-test_vector1 = [factor1, factor2, factor3, vgg4, factor5, vgg6,....]
+test_vector1 = [factor1, factor2, factor3, vgg4, factor5, vgg6,....factor100]
 Generate the opposite vector
-test_vector2 = [vgg1, vgg2, vgg3, factor4, vgg5, factor6,...]
+test_vector2 = [vgg1, vgg2, vgg3, factor4, vgg5, factor6,...vgg100]
 
 test_vector = test_vector1-test_vector2
 avg(test_vector)
