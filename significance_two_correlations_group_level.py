@@ -23,6 +23,7 @@ for roi in ROIS:
 
     all_subject_model1_correlations = []
     all_subject_model2_correlations = []
+    all_subject_actual_average = []
     for subject_num in subject_nums:
         subject_dir = os.path.join(args.functionals_dir,
                                    'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
@@ -30,18 +31,20 @@ for roi in ROIS:
 
         model1_correlations = sio.loadmat(
             os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(args.model1_name, roi, args.hemi)))
-        model1_correlations = model1_correlations['data']
+        model1_correlations = model1_correlations['data'].squeeze()
         all_subject_model1_correlations.append(model1_correlations)
 
         model2_correlations = sio.loadmat(
             os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(args.model2_name, roi, args.hemi)))
-        model2_correlations = model2_correlations['data']
+        model2_correlations = model2_correlations['data'].squeeze()
         all_subject_model2_correlations.append(model2_correlations)
+
+        all_subject_actual_average.append(np.average(model1_correlations - model2_correlations))
 
     all_subject_model1_correlations = np.concatenate(all_subject_model1_correlations)
     all_subject_model2_correlations = np.concatenate(all_subject_model2_correlations)
 
-    assert all_subject_model1_correlations == all_subject_model2_correlations
+    assert all_subject_model1_correlations.shape == all_subject_model2_correlations.shape
 
     num_null_distribution_samples = 1000
 
@@ -52,8 +55,8 @@ for roi in ROIS:
     test_vectors_difference = test_vectors - inverse_test_vectors
     null_hypothesis_average_correlations = np.average(test_vectors_difference, axis=1)
 
-    actual_difference = all_subject_model1_correlations - all_subject_model2_correlations
-    actual_average = np.average(actual_difference)
+    #actual_difference = all_subject_model1_correlations - all_subject_model2_correlations
+    actual_average = np.average(all_subject_actual_average)
 
     print(np.sum(actual_average > null_hypothesis_average_correlations))
 
