@@ -23,7 +23,6 @@ for roi in ROIS:
 
     all_subject_model1_correlations = []
     all_subject_model2_correlations = []
-    all_subject_actual_average = []
     for subject_num in subject_nums:
         subject_dir = os.path.join(args.functionals_dir,
                                    'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
@@ -39,8 +38,13 @@ for roi in ROIS:
         model2_correlations = model2_correlations['data'].squeeze()
         all_subject_model2_correlations.append(model2_correlations)
 
-        all_subject_actual_average.append(np.average(model1_correlations - model2_correlations))
-
+    average_model1_correlations = []
+    average_model2_correlations = []
+    for model1, model2 in zip(all_subject_model1_correlations, all_subject_model2_correlations):
+        average_model1_correlations.append(np.mean(model1))
+        average_model2_correlations.append(np.mean(model2))
+    model1_average_correlations = np.mean(all_subject_model1_correlations)
+    model2_average_correlations = np.mean(all_subject_model1_correlations, axis=1)
     all_subject_model1_correlations = np.concatenate(all_subject_model1_correlations)
     all_subject_model2_correlations = np.concatenate(all_subject_model2_correlations)
 
@@ -55,10 +59,11 @@ for roi in ROIS:
     test_vectors_difference = test_vectors - inverse_test_vectors
     null_hypothesis_average_correlations = np.average(test_vectors_difference, axis=1)
 
-    #actual_difference = all_subject_model1_correlations - all_subject_model2_correlations
-    actual_average = np.average(all_subject_actual_average)
+    average_model1_correlation = np.mean(average_model1_correlations)
+    average_model2_correlation = np.mean(average_model2_correlations)
+    average_difference = average_model1_correlation - average_model2_correlation
 
-    print(np.sum(actual_average > null_hypothesis_average_correlations))
+    print(np.sum(average_difference > null_hypothesis_average_correlations))
 
 '''
 For every voxel in ROI (ex FFA has 100 voxels)
