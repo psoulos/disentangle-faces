@@ -1,9 +1,9 @@
 assert(~(getenv('FIELDTRIP_DIR') == ""), 'You must first set the environment variable FIELDTRIP_DIR')
 assert(~(getenv('SUBJECTS_DIR') == ""), 'You must first set the environment variable SUBJECTS_DIR')
 assert(~(getenv('FUNCTIONALS_DIR') == ""), 'You must first set the environment variable FUNCTIONALS_DIR')
-assert(~(getenv('THRESHOLD') == ""), 'You must first set the environment variable THRESHOLD')
+assert(~(getenv('THRESHOLD_PARAMETER') == ""), 'You must first set the environment variable THRESHOLD')
 
-threshold = str2num(getenv('THRESHOLD'));
+threshold_parameter = str2num(getenv('THRESHOLD_PARAMETER'));
 addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
 subject_nums = {1 2 3 4};
 for i = 1:length(subject_nums)
@@ -32,19 +32,19 @@ for i = 1:length(subject_nums)
     %[sorted_whole_brain_score, indices] = sort(whole_brain_score, 'descend');
     %whole_brain_score(indices(num_top10+1:end)) = 0;
     
-    threshold = 1.5 * std(whole_brain_score);
+    threshold = threshold_parameter * std(whole_brain_score);
     whole_brain_score(whole_brain_score < threshold) = 0;
     
     left_score = whole_brain_score(1:size(left_localizer.vol, 2));
     right_score = whole_brain_score(size(left_localizer.vol, 2)+1:end);
 
     left_reliability.vol = left_score;
-    left_reliability.fspec = [roi_dir '/whole_brain_score_' threshold '.lh.surf.thresholded.nii.gz'];
+    left_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold) '.lh.surf.thresholded.nii.gz'];
     MRIwrite(left_reliability, left_reliability.fspec);
-    save([roi_dir '/whole_brain_score.lh.surf.thresholded.mat'], 'left_score');
+    save([roi_dir '/whole_brain_score_' num2str(threshold) '.lh.surf.thresholded.mat'], 'left_score');
     
     right_reliability.vol = right_score;
-    right_reliability.fspec = [roi_dir '/whole_brain_score_' threshold '.rh.surf.thresholded.nii.gz'];
+    right_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold) '.rh.surf.thresholded.nii.gz'];
     MRIwrite(right_reliability, right_reliability.fspec);
-    save([roi_dir '/whole_brain_score.rh.surf.thresholded.mat'], 'right_score');
+    save([roi_dir '/whole_brain_score_' num2str(threshold) '.rh.surf.thresholded.mat'], 'right_score');
 end
