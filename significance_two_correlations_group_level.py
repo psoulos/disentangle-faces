@@ -43,8 +43,6 @@ for roi in ROIS:
     for model1, model2 in zip(all_subject_model1_correlations, all_subject_model2_correlations):
         average_model1_correlations.append(np.mean(model1))
         average_model2_correlations.append(np.mean(model2))
-    model1_average_correlations = np.mean(all_subject_model1_correlations)
-    model2_average_correlations = np.mean(all_subject_model1_correlations, axis=1)
     all_subject_model1_correlations = np.concatenate(all_subject_model1_correlations)
     all_subject_model2_correlations = np.concatenate(all_subject_model2_correlations)
 
