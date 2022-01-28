@@ -1,7 +1,7 @@
 assert(~(getenv('FIELDTRIP_DIR') == ""), 'You must first set the environment variable FIELDTRIP_DIR')
 assert(~(getenv('SUBJECTS_DIR') == ""), 'You must first set the environment variable SUBJECTS_DIR')
 assert(~(getenv('FUNCTIONALS_DIR') == ""), 'You must first set the environment variable FUNCTIONALS_DIR')
-assert(~(getenv('THRESHOLD_PARAMETER') == ""), 'You must first set the environment variable THRESHOLD')
+assert(~(getenv('THRESHOLD_PARAMETER') == ""), 'You must first set the environment variable THRESHOLD_PARAMETER')
 
 threshold_parameter = str2num(getenv('THRESHOLD_PARAMETER'));
 addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
@@ -39,12 +39,12 @@ for i = 1:length(subject_nums)
     right_score = whole_brain_score(size(left_localizer.vol, 2)+1:end);
 
     left_reliability.vol = left_score;
-    left_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold) '.lh.surf.thresholded.nii.gz'];
+    left_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold_parameter) '.lh.surf.thresholded.nii.gz'];
     MRIwrite(left_reliability, left_reliability.fspec);
-    save([roi_dir '/whole_brain_score_' num2str(threshold) '.lh.surf.thresholded.mat'], 'left_score');
+    save([roi_dir '/whole_brain_score_' num2str(threshold_parameter) '.lh.surf.thresholded.mat'], 'left_score');
     
     right_reliability.vol = right_score;
-    right_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold) '.rh.surf.thresholded.nii.gz'];
+    right_reliability.fspec = [roi_dir '/whole_brain_score_' num2str(threshold_parameter) '.rh.surf.thresholded.nii.gz'];
     MRIwrite(right_reliability, right_reliability.fspec);
-    save([roi_dir '/whole_brain_score_' num2str(threshold) '.rh.surf.thresholded.mat'], 'right_score');
+    save([roi_dir '/whole_brain_score_' num2str(threshold_parameter) '.rh.surf.thresholded.mat'], 'right_score');
 end
