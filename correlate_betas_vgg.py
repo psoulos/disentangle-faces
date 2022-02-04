@@ -23,10 +23,12 @@ parser.add_argument('--n_components', type=int, required=True)
 parser.add_argument('--hidden_layer', type=str, required=True)
 parser.add_argument('--tag', type=str, required=False)
 parser.add_argument('--hemi', type=str, default='right', required=False, help='Which hemisphere to process. Must be one of [left, right, whole].')
-parser.add_argument('--skip_localizer', action='store_true')
+parser.add_argument('--skip_localizer', action='store_true', help='DEPRECATED. Use `--localizer all` instead.')
+parser.add_argument('--localizer', type=str, required=False, default='roi', help='One of [roi,score,all].')
 args = parser.parse_args()
 
 assert(args.hemi in ['left', 'right', 'whole'])
+assert(args.localizer in ['roi', 'score', 'all'])
 
 if args.tag:
     model_name = 'vgg.{}.{}.{}'.format(args.hidden_layer, args.n_components, args.tag)
@@ -58,6 +60,12 @@ vgg_model = VGGFace()
 out = vgg_model.get_layer(args.hidden_layer).output
 vgg_model_new = Model(vgg_model.input, out)
 
+LOCALIZER_TYPE_TO_KEY_NAME = {
+    'roi': 'threshold_roi',
+    'score': '{}_score',
+    'all': '{}_score'
+}
+
 def encode_img(img_file):
     img = image.load_img(img_file, target_size=(224, 224))
     x = image.img_to_array(img)
@@ -76,45 +84,60 @@ for subject_num in subject_nums:
     print('Subject {}'.format(subject_num))
     roi_dir = os.path.join(args.subject_dir, 'vaegan-sub-{:02d}-all'.format(subject_num), 'roi')
 
-    left_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'l*thresholded.both*.mat')))
-    right_roi_files = sorted(glob.glob(os.path.join(roi_dir, 'r*thresholded.both*.mat')))
+    if args.localizer == 'roi':
+        left_localizer_filename = 'l*thresholded.both*.mat'
+        right_localizer_filename = 'r*thresholded.both*.mat'
+    elif args.localizer == 'score':
+        left_localizer_filename = 'whole_brain_score_1.5.lh.surf.thresholded.mat'
+        right_localizer_filename = 'whole_brain_score_1.5.rh.surf.thresholded.mat'
+        localizer_name = 'score'
+    else:
+        # Use one of the other filenames to figure out how many voxels are in each hemisphere but later we will set the
+        # localizer to all ones
+        left_localizer_filename = 'whole_brain_score_1.5.lh.surf.thresholded.mat'
+        right_localizer_filename = 'whole_brain_score_1.5.rh.surf.thresholded.mat'
+        localizer_name = 'all'
 
-    # If we are skipping localizers, we will only use one ROI file and use that file to get the number of voxels in each
-    # hemisphere rather than the ROI voxel locations
-    if args.skip_localizer:
-        left_roi_files = [left_roi_files[0]]
-        right_roi_files = [right_roi_files[0]]
+    left_localizer_files = sorted(glob.glob(os.path.join(roi_dir, left_localizer_filename)))
+    right_localizer_files = sorted(glob.glob(os.path.join(roi_dir, right_localizer_filename)))
 
     test_images = TEST_STIMULI['vaegan-sub-{:02d}-all'.format(subject_num)]
 
-    for left_roi_file, right_roi_file in zip(left_roi_files, right_roi_files):
+    for left_localizer_file, right_localizer_file in zip(left_localizer_files, right_localizer_files):
         subject_dir = os.path.join(args.functionals_dir,
                                    'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         betas = sio.loadmat(betas_location)
 
-        left_roi = os.path.basename(left_roi_file).split('.')[0] if not args.skip_localizer else 'all'
+        if args.localizer == 'roi':
+            # Use the roi file name to extract the roi name
+            localizer_name = os.path.basename(left_localizer_file).split('.')[0]
 
         if args.hemi == 'left':
-            localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
+            localizer_map = sio.loadmat(left_localizer_file)
+            localizer_map = localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format(args.hemi)][0] > 0
             # Use all voxels if we don't want to use the localizer
-            if args.skip_localizer:
+            if args.localizer == 'all':
                 localizer_map = np.ones_like(localizer_map)
             # Take the first n dimensions which correspond to voxels in the left hemi
             betas = np.array(betas['betas'][:len(localizer_map)][localizer_map]).transpose()
         elif args.hemi == 'right':
-            localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            localizer_map = sio.loadmat(right_localizer_file)
+            localizer_map = localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format(args.hemi)][0] > 0
             # Use all voxels if we don't want to use the localizer
-            if args.skip_localizer:
+            if args.localizer == 'all':
                 localizer_map = np.ones_like(localizer_map)
             # Take the last n dimensions which correspond to voxels in the right hemi
             betas = np.array(betas['betas'][-len(localizer_map):][localizer_map]).transpose()
         else:
-            left_localizer_map = sio.loadmat(left_roi_file)['threshold_roi'][0] > 0
-            right_localizer_map = sio.loadmat(right_roi_file)['threshold_roi'][0] > 0
+            left_localizer_map = sio.loadmat(left_localizer_file)
+            left_localizer_map = left_localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format('left')][0] > 0
+            n_left_voxels = np.sum(left_localizer_map)
+            right_localizer_map = sio.loadmat(right_localizer_file)
+            right_localizer_map = right_localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format('right')][0] > 0
             localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
             # Use all voxels if we don't want to use the localizer
-            if args.skip_localizer:
+            if args.localizer == 'all':
                 localizer_map = np.ones_like(localizer_map)
             betas = np.array(betas['betas'][localizer_map]).transpose()
 
@@ -144,13 +167,18 @@ for subject_num in subject_nums:
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
-        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.predicted_voxels.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': predicted_voxels})
-        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.ground_truth.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': ground_truth_voxels})
-        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(model_name, left_roi[1:], args.hemi)), {'data': correlation})
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.predicted_voxels.mat'.format(model_name, localizer_name, args.hemi)), {'data': predicted_voxels})
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.ground_truth.mat'.format(model_name, localizer_name, args.hemi)), {'data': ground_truth_voxels})
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(model_name, localizer_name, args.hemi)), {'data': correlation})
 
         average_correlation = np.mean(correlation)
         std = np.std(correlation)
         print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
+        if args.hemi == 'whole':
+            left_correlation = correlation[:n_left_voxels]
+            right_correlation = correlation[n_left_voxels:]
+            print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(np.mean(left_correlation), np.std(left_correlation)))
+            print('Right correlation: {:.3f} \u00B1 {:.3f}'.format(np.mean(right_correlation), np.std(right_correlation)))
 
         if not args.skip_p_value:
             # Generate samples from a null distribution for significance testing

@@ -18,9 +18,8 @@ parser.add_argument('--subject_dir', type=str, required=True)
 parser.add_argument('--functionals_dir', type=str, required=True)
 parser.add_argument('--tag', type=str, required=False)
 parser.add_argument('--hemi', type=str, default='right', required=False, help='Which hemisphere to process. Must be one of [left, right, whole].')
-parser.add_argument('--skip_localizer', action='store_true')
+parser.add_argument('--skip_localizer', action='store_true', help='DEPRECATED. Use `--localizer all` instead.')
 parser.add_argument('--localizer', type=str, required=False, default='roi', help='One of [roi,score,all].')
-# CONTINUE: add a flag for specifying the localizer file to use
 args = parser.parse_args()
 
 assert(args.hemi in ['left', 'right', 'whole'])
@@ -110,7 +109,8 @@ for subject_num in subject_nums:
 
         if args.localizer == 'roi':
             # Use the roi file name to extract the roi name
-            localizer_name = os.path.basename(left_localizer_file).split('.')[0]
+            localizer_name = os.path.basename(left_localizer_file).split('.')[0][1:]
+            print(localizer_name)
 
         if args.hemi == 'left':
             localizer_map = sio.loadmat(left_localizer_file)
@@ -131,6 +131,7 @@ for subject_num in subject_nums:
         else:
             left_localizer_map = sio.loadmat(left_localizer_file)
             left_localizer_map = left_localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format('left')][0] > 0
+            n_left_voxels = np.sum(left_localizer_map)
             right_localizer_map = sio.loadmat(right_localizer_file)
             right_localizer_map = right_localizer_map[LOCALIZER_TYPE_TO_KEY_NAME[args.localizer].format('right')][0] > 0
             localizer_map = np.concatenate((left_localizer_map, right_localizer_map))
@@ -172,6 +173,11 @@ for subject_num in subject_nums:
         average_correlation = np.mean(correlation)
         std = np.std(correlation)
         print('Correlation: {:.3f} \u00B1 {:.3f}'.format(average_correlation, std))
+        if args.hemi == 'whole':
+            left_correlation = correlation[:n_left_voxels]
+            right_correlation = correlation[n_left_voxels:]
+            print('Left correlation: {:.3f} \u00B1 {:.3f}'.format(np.mean(left_correlation), np.std(left_correlation)))
+            print('Right correlation: {:.3f} \u00B1 {:.3f}'.format(np.mean(right_correlation), np.std(right_correlation)))
 
         if not args.skip_p_value:
             # Generate samples from a null distribution for significance testing
