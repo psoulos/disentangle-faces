@@ -36,7 +36,7 @@ for subject_num in subject_nums:
 
         num_null_distribution_samples = 1000
 
-        randomized = np.random.randint(2, size=[num_null_distribution_samples, len(model1_correlations)])
+        randomized = np.random.randint(2, size=[num_null_distribution_samples, model1_correlations.shape[1]])
         test_vectors = model1_correlations * randomized + model2_correlations * (1-randomized)
         inverse_test_vectors = model1_correlations * (1-randomized) + model2_correlations * randomized
 

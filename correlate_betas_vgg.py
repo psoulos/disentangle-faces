@@ -152,10 +152,12 @@ for subject_num in subject_nums:
 
         predicted_voxels = np.empty((len(test_images), n_voxels))
         correlation = np.empty(n_voxels)
+        test_image_to_latent_values = {}
         for index, test_image in enumerate(test_images):
             celeba_file = os.path.join(args.celeba_dir, stimulus_to_celeba[test_image])
             # (1 x 24)
             latent_values = encode_img(celeba_file)
+            test_image_to_latent_values[test_image.split('.')[0]] = latent_values
             # (1 x n_voxels)
             prediction = np.matmul(latent_values, latent_betas)
             predicted_voxels[index] = prediction + bias_beta
@@ -167,6 +169,7 @@ for subject_num in subject_nums:
 
         correlations_dir = os.path.join(subject_dir, 'correlations')
         pathlib.Path(correlations_dir).mkdir(parents=False, exist_ok=True)
+        sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.test_image_latent_values.mat'.format(model_name, localizer_name, args.hemi)), test_image_to_latent_values)
         sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.predicted_voxels.mat'.format(model_name, localizer_name, args.hemi)), {'data': predicted_voxels})
         sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.ground_truth.mat'.format(model_name, localizer_name, args.hemi)), {'data': ground_truth_voxels})
         sio.savemat(os.path.join(correlations_dir, '{}.{}.{}.correlations.mat'.format(model_name, localizer_name, args.hemi)), {'data': correlation})

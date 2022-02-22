@@ -20,27 +20,28 @@ for i = 1:length(subject_nums)
     left_hemi_betas = MRIread([left_hemi_beta_dir '/beta.nii.gz']);
     right_hemi_betas = MRIread([right_hemi_beta_dir '/beta.nii.gz']);
 
-    correlation = load([correlations_dir getenv('MODEL_NAME') '.whole.correlations.mat']);
+    correlation = load([correlations_dir getenv('MODEL_NAME') '.score.whole.correlations.mat']);
     correlation = correlation.data;
 
-    left_localizer = load([roi_dir 'whole_brain_score_' str2num(getenv('SCORE_THRESHOLD') '.lh.surf.thresholded.mat']);
-    left_localizer = left_localizer.left_score > 0
-    right_localizer = load([roi_dir 'whole_brain_score_' str2num(getenv('SCORE_THRESHOLD') '.rh.surf.thresholded.mat']);
-    right_localizer = right_localizer.right_score > 0
+    left_localizer = load([roi_dir 'whole_brain_score_' getenv('SCORE_THRESHOLD') '.lh.surf.thresholded.mat']);
+    left_localizer = left_localizer.left_score > 0;
+    right_localizer = load([roi_dir 'whole_brain_score_' getenv('SCORE_THRESHOLD') '.rh.surf.thresholded.mat']);
+    right_localizer = right_localizer.right_score > 0;
 
     left_correlations = correlation(1:sum(left_localizer));
     right_correlations = correlation(sum(left_localizer)+1:length(correlation));
 
-    expanded_left_correlations = left_roi;
-    expanded_left_correlations(find(left_roi)) = left_correlations;
-    expanded_right_correlations = right_roi;
-    expanded_right_correlations(find(right_roi)) = right_correlations;
+    % We need to convert the logical array into a numerical array with 'double'
+    expanded_left_correlations = double(left_localizer);
+    expanded_left_correlations(find(left_localizer)) = left_correlations;
+    expanded_right_correlations = double(right_localizer);
+    expanded_right_correlations(find(right_localizer)) = right_correlations;
 
     left_hemi_betas.vol = expanded_left_correlations;
-    left_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') 'score.lh.correlations.nii.gz'];
+    left_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.lh.correlations.nii.gz'];
     MRIwrite(left_hemi_betas, left_hemi_betas.fspec);
 
     right_hemi_betas.vol = expanded_right_correlations;
-    right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') 'score.rh.correlations.nii.gz'];
+    right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.rh.correlations.nii.gz'];
     MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
 end
