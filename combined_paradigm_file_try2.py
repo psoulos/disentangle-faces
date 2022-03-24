@@ -10,6 +10,7 @@ parser.add_argument('--model_one_name', type=str, help='', required=True)
 parser.add_argument('--model_two_name', type=str, help='', required=True)
 parser.add_argument('--model_one_dimensions', type=int, help='', required=True)
 parser.add_argument('--model_two_dimensions', type=int, help='', required=True)
+parser.add_argument('--unpackdata_dir', type=str, help='', required=True)
 args = parser.parse_args()
 
 model_name = 'combined.{}.{}'.format(args.model_one_name, args.model_two_name)
@@ -70,7 +71,7 @@ for subject_num in subject_nums:
         model_two_current_line = 0
         while model_one_current_line < len(model_one_output):
             current_line = model_one_output[model_one_current_line].split('\t')
-            if current_line[PARADIGM_LINE_CONDITION_INDEX] == 0:
+            if int(current_line[PARADIGM_LINE_CONDITION_INDEX]) == 0:
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}'.format(
                     current_line[PARADIGM_LINE_ONSET_INDEX],
                     0,
@@ -82,7 +83,7 @@ for subject_num in subject_nums:
                 model_two_current_line += 1
                 continue
             # If we are in the range of oneback or test stimuli, just write that line and continue
-            elif current_line[PARADIGM_LINE_CONDITION_INDEX] >= args.model_one_dimensions + 2:
+            elif int(current_line[PARADIGM_LINE_CONDITION_INDEX]) >= args.model_one_dimensions + 2:
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}'.format(
                     current_line[PARADIGM_LINE_ONSET_INDEX],
                     # Off set the condition ids to account for the increased dimensionality owing to model two
@@ -110,7 +111,7 @@ for subject_num in subject_nums:
             for condition, latent_value in map(extract_condition_and_value, model_two_output[model_two_current_line:model_two_current_line + args.model_two_dimensions]):
                 paradigm_file.write('{}\t{}\t{}\t{}\t{}'.format(
                     onset,
-                    condition,
+                    condition + args.model_one_dimensions,
                     duration,
                     latent_value,
                     stimulus_filename
