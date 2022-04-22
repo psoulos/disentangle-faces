@@ -20,27 +20,35 @@ n_way_acc = mean_pairwise;
 encoding_corr = cell(4,3);
 encoding_corr_feat = cell(4,3);
 
-for s = 1:1
+for s = 1:4
     %% ROIs
     roi_dir = ([getenv('SUBJECTS_DIR') '/vaegan-sub-0' num2str(s) '-all/roi/']);
     bold_dir = [getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(s) '-all/bold/'];
+    
+    % Read the beta nifti so we can use that data structure to save our
+    % preference map
+    right_hemi_betas = MRIread([bold_dir model '.rh/beta.nii.gz']);
+    right_hemi_all_rois = zeros(1, right_hemi_betas.nvoxels);
+    
+    %% Load betas
+    beta_file = [bold_dir '/' model '.train_bias.betas.mat'];
+    load(beta_file)
 
     for r = 1:length(ROIs)
+        roi = ROIs{r};
         rroi = ['r' ROIs{r}];%'whole_brain_score_1.5.rh';
-        lroi = ['l' ROIs{r}];%'whole_brain_score_1.5.lh';
-        lh_localizer = [roi_dir lroi '.surf.thresholded.both.mat'];
+        %lroi = ['l' ROIs{r}];%'whole_brain_score_1.5.lh';
+        %lh_localizer = [roi_dir lroi '.surf.thresholded.both.mat'];
         rh_localizer = [roi_dir rroi '.surf.thresholded.both.mat'];
 
-        load(lh_localizer)
+        %load(lh_localizer)
         load(rh_localizer)
 
-        %% Load betas
-        beta_file = [bold_dir '/' model '.train_bias.betas.mat'];
-        load(beta_file)
         if roi 
             localizer = zeros(1,size(betas,1));
             localizer(end-length(threshold_roi)+1:end) = threshold_roi;
         else
+            % TODO
             localizer = [left_score right_score];
         end
 
@@ -92,9 +100,16 @@ for s = 1:1
             encoding_corr_feat{s,r}(:,f) = corr_col(y',y_hat_f');
         end
         
-        [max_corr, index] = max(encoding_corr_feat{1,1}, [], 2);
+        [max_corr, index] = max(encoding_corr_feat{s,r}, [], 2);
+        right_hemi_all_rois(find(threshold_roi)) = index;
         
-        left_hemi_betas = MRIread([bold_dir '/correlations/' model ...
-         '.train_bias.output.mat']);
+        % mean(encoding_corr_feat{1,1}) to get the average prediction
+        % accuracy for each latent dimension to an ROI
+        
     end
+    
+    mkdir([bold_dir 'preference_maps/'])
+    right_hemi_betas.vol = right_hemi_all_rois;
+    right_hemi_betas.fspec = [bold_dir 'preference_maps/' model '.right.preference.nii.gz'];
+    MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
 end

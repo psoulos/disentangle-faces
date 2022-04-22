@@ -29,16 +29,16 @@ LOCALIZER_TYPE_TO_KEY_NAME = {
     'all': '{}_score'
 }
 
-latent_values = {}
+precomputed_latent_values = {}
 
 def encode_img(img_file):
     latent_value = []
     if contains_factor:
-        latent_value.append(latent_values['factor']['img_file'])
+        latent_value.append(precomputed_latent_values['factor'][img_file])
     if contains_vae:
-        latent_value.append(latent_values['vae']['img_file'])
+        latent_value.append(precomputed_latent_values['vae'][img_file])
     if contains_vgg:
-        latent_value.append(latent_values['vgg']['img_file'])
+        latent_value.append(precomputed_latent_values['vgg'][img_file])
 
     return np.concatenate(latent_value, axis=1)
 
@@ -99,9 +99,9 @@ for subject_num in subject_nums:
         subject_dir = os.path.join(args.functionals_dir, 'vaegan-consolidated/unpackdata/vaegan-sub-{:02d}-all/bold/'.format(subject_num))
         betas_location = os.path.join(subject_dir, '{}.betas.mat'.format(model_name))
         latent_values_dir = os.path.join(subject_dir, 'correlations')
-        latent_values['factor'] = sio.loadmat(os.path.join(latent_values_dir, 'factor_vae_output.mat'))
-        latent_values['vae'] = sio.loadmat(os.path.join(latent_values_dir, 'vae_output.mat'))
-        latent_values['vgg'] = sio.loadmat(os.path.join(latent_values_dir, 'vgg_output.mat'))
+        precomputed_latent_values['factor'] = sio.loadmat(os.path.join(latent_values_dir, 'factor_vae_output.mat'))
+        precomputed_latent_values['vae'] = sio.loadmat(os.path.join(latent_values_dir, 'vae_output.mat'))
+        precomputed_latent_values['vgg'] = sio.loadmat(os.path.join(latent_values_dir, 'vgg_output.mat'))
 
         betas = sio.loadmat(betas_location)
 
@@ -152,7 +152,7 @@ for subject_num in subject_nums:
         #test_image_to_latent_values = {}
         for index, test_image in enumerate(test_images):
             # (1 x 24)
-            latent_values = encode_img(test_image.split('.jpg'))
+            latent_values = encode_img(test_image.split('.jpg')[0])
             #test_image_to_latent_values[test_image.split('.')[0]] = latent_values
             # (1 x n_voxels)
             prediction = np.matmul(latent_values, latent_betas)
