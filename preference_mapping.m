@@ -6,9 +6,9 @@ assert(~(getenv('FIELDTRIP_DIR') == ""), 'You must first set the environment var
 addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
 
 %% Models
-models = {'factor_vae.latent_24.hyper_10.random_50751608', ...
-    'vae.latent_24.hyper_1.random_50639474', ...
-    'vgg.fc7.24'};
+models = {'factor_vae.latent_24.hyper_10.random_50751608.train_bias', ...
+    'vae.latent_24.hyper_1.random_50639474.train_bias', ...
+    'vgg.fc7.24.train_bias'};
 %% Localizer
 ROIs = {'FFA', 'OFA', 'STS'};
 roi = 1;
@@ -34,7 +34,7 @@ for model_i = 1:length(models)
         right_hemi_all_rois = zeros(1, right_hemi_betas.nvoxels);
 
         %% Load betas
-        beta_file = [bold_dir '/' model '.train_bias.betas.mat'];
+        beta_file = [bold_dir '/' model '.betas.mat'];
         load(beta_file)
 
         for r = 1:length(ROIs)
@@ -62,7 +62,7 @@ for model_i = 1:length(models)
 
             %% Extract test image latent values
             img_latent_file = [bold_dir '/correlations/' model ...
-             '.train_bias.output.mat'];
+             '.output.mat'];
             load(img_latent_file);
             test_img_list = {{'M2553', 'F1631', 'M2424', 'F1235', 'F1148', 'M2156', 'F2376', ...
                 'M1584', 'M2466', 'F2068', 'F1586', 'F1232', 'M2203', 'M1365',...
