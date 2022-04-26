@@ -11,7 +11,7 @@ models = {'factor_vae.latent_24.hyper_10.random_50751608', ...
     'vgg.fc7.24'};
 model = models{1};
 %% Localizer
-ROIs = {'OFA', 'FFA', 'STS'};
+ROIs = {'FFA', 'OFA', 'STS'};
 roi = 1;
 
 mean_pairwise = zeros(4, length(models));
@@ -19,8 +19,10 @@ mean_pairwise_VR = mean_pairwise;
 n_way_acc = mean_pairwise;
 encoding_corr = cell(4,3);
 encoding_corr_feat = cell(4,3);
+mkdir('encoding_corr_feat')
 
 for s = 1:4
+    fprintf('Subject %i\n', s)
     %% ROIs
     roi_dir = ([getenv('SUBJECTS_DIR') '/vaegan-sub-0' num2str(s) '-all/roi/']);
     bold_dir = [getenv('FUNCTIONALS_DIR') '/vaegan-consolidated/unpackdata/vaegan-sub-0' num2str(s) '-all/bold/'];
@@ -36,6 +38,7 @@ for s = 1:4
 
     for r = 1:length(ROIs)
         roi = ROIs{r};
+        fprintf('ROI %s\n', roi)
         rroi = ['r' ROIs{r}];%'whole_brain_score_1.5.rh';
         %lroi = ['l' ROIs{r}];%'whole_brain_score_1.5.lh';
         %lh_localizer = [roi_dir lroi '.surf.thresholded.both.mat'];
@@ -106,6 +109,7 @@ for s = 1:4
         % mean(encoding_corr_feat{1,1}) to get the average prediction
         % accuracy for each latent dimension to an ROI
         
+        writematrix(encoding_corr_feat{s,r}, ['encoding_corr_feat/subject_' num2str(s) '_roi_' roi '.csv'])
     end
     
     mkdir([bold_dir 'preference_maps/'])
