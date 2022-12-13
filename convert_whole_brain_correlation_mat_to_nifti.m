@@ -34,14 +34,16 @@ for i = 1:length(subject_nums)
     % We need to convert the logical array into a numerical array with 'double'
     expanded_left_correlations = double(left_localizer);
     expanded_left_correlations(find(left_localizer)) = left_correlations;
+    expanded_left_correlations(find(~left_localizer)) = 1;
     expanded_right_correlations = double(right_localizer);
     expanded_right_correlations(find(right_localizer)) = right_correlations;
-
+    expanded_right_correlations(find(~right_localizer)) = 1;
+    
     left_hemi_betas.vol = expanded_left_correlations;
-    left_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.lh.correlations.nii.gz'];
+    left_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.lh.correlations.0isOne.nii.gz'];
     MRIwrite(left_hemi_betas, left_hemi_betas.fspec);
 
     right_hemi_betas.vol = expanded_right_correlations;
-    right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.rh.correlations.nii.gz'];
+    right_hemi_betas.fspec = [correlations_dir getenv('MODEL_NAME') '.score.' getenv('SCORE_THRESHOLD') '.rh.correlations.0isOne.nii.gz'];
     MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
 end
