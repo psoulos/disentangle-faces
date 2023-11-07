@@ -6,22 +6,39 @@ assert(~(getenv('FIELDTRIP_DIR') == ""), 'You must first set the environment var
 addpath([getenv('FIELDTRIP_DIR') '/external/freesurfer'])
 
 %% Models
-models = {'factor_vae.latent_24.hyper_10.random_50751608.train_bias', ...
-    'vae.latent_24.hyper_1.random_50639474.train_bias', ...
-    'vgg.fc7.24.train_bias'};
+models = {'factor_vae.latent_24.hyper_10.random_50751608.train_bias'}
+%models = {'factor_vae.latent_24.hyper_10.random_50751608.train_bias', ...
+%    'vae.latent_24.hyper_1.random_50639474.train_bias', ...
+%    'vgg.fc7.24.train_bias'};
 %% Localizer
 ROIs = {'FFA', 'OFA', 'STS'};
-roi = 1;
-
-mean_pairwise = zeros(4, length(models));
+n_rois = 3;
+n_subjects = 4;
+n_dimensions = 24;
+mean_pairwise = zeros(n_subjects, length(models));
 mean_pairwise_VR = mean_pairwise;
 n_way_acc = mean_pairwise;
 encoding_corr = cell(4,3);
 encoding_corr_feat = cell(4,3);
 mkdir('encoding_corr_feat')
 
+permutation_test = true
+if permutation_test
+    n_permutations = 5000;
+    n_test_images = 20;
+    permutation_matrix = zeros(n_permutations, n_test_images);
+    permutation_correlations = zeros(n_subjects, n_dimensions, n_rois, n_permutations);
+
+    % Pre-calculate the permutation matrix so that I can share it between the
+    % ROIs
+    for i = 1:n_permutations
+        permutation_matrix(i,:) = randperm(20);
+    end
+end
+
 for model_i = 1:length(models)
     model = models{model_i}
+    
     for s = 1:4
         fprintf('Subject %i\n', s)
         %% ROIs
@@ -102,6 +119,17 @@ for model_i = 1:length(models)
                 W_f(:,f) = W(:,f);
                 y_hat_f = W_f*X+b;
                 encoding_corr_feat{s,r}(:,f) = corr_col(y',y_hat_f');
+                if permutation_test
+                    for i_permutation = 1:n_permutations
+                        shuffled_y = zeros(size(y));
+                        for i_voxel = 1:size(y, 1)
+                            shuffled_y(i_voxel, :) = y(i_voxel, permutation_matrix(i_permutation, :));
+                        end
+                        % TODO: permutation_correlations needs an ROI
+                        % dimension
+                        permutation_correlations(s, f, r, i_permutation) = mean(corr_col(shuffled_y', y_hat_f'));
+                    end
+                end
             end
 
             [max_corr, index] = max(encoding_corr_feat{s,r}, [], 2);
@@ -117,5 +145,40 @@ for model_i = 1:length(models)
         right_hemi_betas.vol = right_hemi_all_rois;
         right_hemi_betas.fspec = [bold_dir 'preference_maps/' model '.right.preference.nii.gz'];
         MRIwrite(right_hemi_betas, right_hemi_betas.fspec);
+    end
+    
+    % I put the correlations in a cell instead of a tensor before, so put
+    % the data in a tensor for easier processing
+    subj_dim_roi_correlations = zeros(n_subjects, n_dimensions, n_rois);
+    for s = 1:4
+        for r = 1:length(ROIs)
+            for d = 1:n_dimensions
+                subj_dim_roi_correlations(s, d, r) = mean(encoding_corr_feat{s,r}(:, d));
+            end
+        end
+    end
+
+    
+    % Mean the results across subjects, iterate over the ROIs, latent
+    % dimensions and count the times the real correlation is greater than
+    % the permutations
+    % By ROI by dimension versus chance
+    mean_permutation_correlations = mean(permutation_correlations, 1);
+    mean_dim_roi_correlations = mean(subj_dim_roi_correlations, 1);
+    for r = 1:length(ROIs)
+        for d = 1:n_dimensions
+            actual_less_than_permutation = sum(mean_dim_roi_correlations(1, d, r) < mean_permutation_correlations(1,d,r,:));
+            p = (actual_less_than_permutation+1)/n_permutations;
+            fprintf('ROI %s, Dim %d, p=%f, sig=%d\n', ROIs{r}, d, p, p<.05)
+        end
+    end
+    
+    % ROI vs ROI
+    for d = 1:n_dimensions
+        actual_ffa_minus_ofa = mean_dim_roi_correlations(1, d, 1) - mean_dim_roi_correlations(1, d, 2);
+        permutation_ffa_minus_ofa = mean_permutation_correlations(1, d, 1, :) - mean_permutation_correlations(1, d, 2, :);
+        actual_less_than_permutation = sum(actual_ffa_minus_ofa < permutation_ffa_minus_ofa);
+        p = (actual_less_than_permutation+1)/n_permutations;
+        fprintf('FFA-OFA, Dim %d, p=%f, p<.05=%d, p>.95=%d\n', d, p, p<.05, p>.95)
     end
 end

@@ -76,6 +76,7 @@ for model_i = 1:length(models)
             % 77 is M
         end
 
+        w_inv = pinv(W);
         y_hat = W*X+b;
         
         all_images_correct = 0;
@@ -83,18 +84,18 @@ for model_i = 1:length(models)
         for i = 1:size(y_hat,2)
             reconstruction = y_hat(:,i);
             ground_truth = y(:,i);
-            recon_ground_truth_corr = corr_col(reconstruction, ground_truth);
+            recon_ground_truth_corr = corr(reconstruction, ground_truth, 'Type','Spearman');%corr_col(reconstruction, ground_truth);
             corrs = zeros(size(y_hat,2),1);
             for j = 1:size(y_hat,2)
                 distractor = y(:,j);
-                distractor_corr = corr_col(reconstruction, distractor);
+                distractor_corr = corr(reconstruction, distractor, 'Type','Spearman');
                 corrs(j) = distractor_corr;
             end
             total_correct = sum(recon_ground_truth_corr > corrs);
             total = length(corrs)-1;
             all_images_correct = all_images_correct + total_correct;
             number_of_pairwise_comparison = number_of_pairwise_comparison + total;
-            fprintf('Subject %i Test Image %i %i/%i\n', s, i, total_correct, total)
+            %fprintf('Subject %i Test Image %i %i/%i\n', s, i, total_correct, total)
         end
         fprintf('Subject %i %i/%i\n', s, all_images_correct, number_of_pairwise_comparison)
 
