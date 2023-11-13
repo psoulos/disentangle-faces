@@ -1,3 +1,7 @@
+"""
+This file calculates the group level (across subjects) correlation significance between two models.
+"""
+
 import argparse
 import os
 

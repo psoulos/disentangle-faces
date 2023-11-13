@@ -1,3 +1,7 @@
+"""
+This file calculates the group level (across subjects) correlation significance versus chance.
+"""
+
 import numpy as np
 import scipy.io as sio
 import os

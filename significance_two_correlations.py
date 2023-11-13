@@ -1,3 +1,7 @@
+"""
+This file calculates the individual subject correlation significance between two models.
+"""
+
 import argparse
 import os
 
